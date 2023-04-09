@@ -1,5 +1,6 @@
 #include "BackgroundTask.hpp"
 #include <thread>
+#include <mutex>
 #include <queue>
 
 using Notifier = std::function<void()>;

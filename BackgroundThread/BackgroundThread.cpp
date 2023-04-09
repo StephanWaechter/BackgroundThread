@@ -1,5 +1,6 @@
-#include <BackgroundThread/BackgroundThread.hpp>s
+#include <BackgroundThread/BackgroundThread.hpp>
 #include <iostream>
+
 void BackgroundThread::Start(Notifier notifier)
 {
 	m_continue = true;
@@ -23,7 +24,7 @@ BackgroundThread::~BackgroundThread()
 void BackgroundThread::Add(ptrBackgroundTaskBase const& worker)
 {
 	{
-		std::lock_guard lock(m_mutex);
+		std::lock_guard<std::mutex> lock(m_mutex);
 		m_queue.push(worker);
 		std::cout << "BackgroundThread::Add: m_queue.size() " << m_queue.size() << std::endl;
 	}
@@ -45,7 +46,7 @@ void BackgroundThread::Process()
 	while (m_continue)
 	{
 		{
-			std::unique_lock lock(m_mutex);
+			std::unique_lock<std::mutex> lock(m_mutex);
 			m_cond_var.wait(lock, [&] { return !m_queue.empty(); });
 		}
 		auto& currentTask = m_queue.front();
