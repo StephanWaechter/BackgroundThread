@@ -1,3 +1,4 @@
+#pragma once
 #include "BackgroundTask.hpp"
 #include <thread>
 #include <mutex>
