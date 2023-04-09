@@ -1,1 +1,0 @@
-#include <BackgroundThread/BackgroundTask.hpp>

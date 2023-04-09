@@ -4,7 +4,7 @@
 cmake_minimum_required (VERSION 3.8)
 project(BackgroundThreadLibrary VERSION 0.0.1)
 
-add_library(BackgroundThread "BackgroundTask.cpp" "BackgroundThread.cpp")
+add_library(BackgroundThread "Task.cpp" "Thread.cpp")
 target_compile_definitions(BackgroundThread PUBLIC cxx_std_17)
 target_include_directories(BackgroundThread PUBLIC 
 	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>

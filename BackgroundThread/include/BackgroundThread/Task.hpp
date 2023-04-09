@@ -3,7 +3,10 @@
 #include <mutex>
 #include <functional>
 
-class BackgroundTaskBase
+namespace BackgroundThread
+{
+
+class TaskBase
 {
 public:
 	virtual void Run() = 0;
@@ -11,17 +14,17 @@ public:
 };
 
 template<class TResult>
-class BackgroundTask : public BackgroundTaskBase
+class Task : public TaskBase
 {
 public:
-	BackgroundTask(
+	Task(
 		std::function<TResult(void)> work,
 		std::function<void(TResult)> finalize) :
 		m_work{work},
 		m_result{nullptr},
 		m_finalize{finalize} {};
 
-	BackgroundTask(const BackgroundTask& o) : 
+	Task(const Task& o) :
 		m_work{ o.m_work },
 		m_finalize{ o.m_finalize },
 		m_result{ nullptr } {};
@@ -36,16 +39,16 @@ private:
 };
 
 template<>
-class BackgroundTask<void> : public BackgroundTaskBase
+class Task<void> : public TaskBase
 {
 public:
-	BackgroundTask(
+	Task(
 		std::function<void()> work,
 		std::function<void()> finalize) :
 		m_work{ work },
 		m_finalize{ finalize } {};
 
-	BackgroundTask(const BackgroundTask& o) :
+	Task(const Task& o) :
 		m_work{ o.m_work },
 		m_finalize{ o.m_finalize } {};
 
@@ -57,25 +60,26 @@ private:
 	std::function<void()> m_finalize;
 };
 
-inline void BackgroundTask<void>::Run()
+inline void Task<void>::Run()
 {
 	m_work();
 }
 
-inline void BackgroundTask<void>::Finalize()
+inline void Task<void>::Finalize()
 {
 	m_finalize();
 }
 
 template<class TResult>
-inline void BackgroundTask<TResult>::Run()
+inline void Task<TResult>::Run()
 {
 	m_result = std::make_unique<TResult>( m_work() );
 }
 
 template<class TResult>
-inline void BackgroundTask<TResult>::Finalize()
+inline void Task<TResult>::Finalize()
 {
 	m_finalize(*m_result);
 }
 
+}

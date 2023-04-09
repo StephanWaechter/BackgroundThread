@@ -9,7 +9,7 @@
 #include <gtkmm/listbox.h>
 #include <glibmm/dispatcher.h>
 #include <iostream>
-#include <BackgroundThread/BackgroundThread.hpp>
+#include <BackgroundThread/Thread.hpp>
 #include <future>
 
 using namespace Glib;
@@ -54,7 +54,7 @@ protected:
 
 	void notify();
 	Glib::Dispatcher m_dispatcher;
-	BackgroundThread m_Threads;
+	BackgroundThread::Thread m_Threads;
 };
 
 MyWindow::MyWindow()
@@ -99,7 +99,7 @@ MyWindow::MyWindow()
 	set_child(m_grid);
 
 	m_Threads.Start(std::bind(&MyWindow::notify,this));
-	m_dispatcher.connect(sigc::mem_fun(m_Threads, &BackgroundThread::Continue));
+	m_dispatcher.connect(sigc::mem_fun(m_Threads, &BackgroundThread::Thread::Continue));
 }
 
 void MyWindow::notify()
@@ -135,8 +135,8 @@ void MyWindow::on_clicked(int x, int y)
 
 	m_label.set_text(message.str());
 	m_Threads.Add(
-		std::make_shared<BackgroundTask<int>>(
-			BackgroundTask<int>(
+		std::make_shared<BackgroundThread::Task<int>>(
+			BackgroundThread::Task<int>(
 				std::bind(&DelayedWork, x, y),
 				std::bind(&MyWindow::OnWorkDone, this, x, y, std::placeholders::_1)
 				)

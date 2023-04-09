@@ -1,27 +1,27 @@
-#include <BackgroundThread/BackgroundThread.hpp>
+#include <BackgroundThread/Thread.hpp>
 #include <iostream>
 
-void BackgroundThread::Start(Notifier notifier)
+void BackgroundThread::Thread::Start(Notifier notifier)
 {
 	m_continue = true;
 	m_notifier = notifier;
 	if (m_thread == nullptr)
-		m_thread = std::make_unique<std::thread>(&BackgroundThread::Process, this);
+		m_thread = std::make_unique<std::thread>(&BackgroundThread::Thread::Process, this);
 }
 
-void BackgroundThread::Stop()
+void BackgroundThread::Thread::Stop()
 {
 	m_continue = false;
 	m_thread->join();
 }
 
-BackgroundThread::~BackgroundThread()
+BackgroundThread::Thread::~Thread()
 {
 	if(m_continue)
 		Stop();
 }
 
-void BackgroundThread::Add(ptrBackgroundTaskBase const& worker)
+void BackgroundThread::Thread::Add(ptrTaskBase const& worker)
 {
 	{
 		std::lock_guard<std::mutex> lock(m_mutex);
@@ -31,7 +31,7 @@ void BackgroundThread::Add(ptrBackgroundTaskBase const& worker)
 	m_cond_var.notify_one();
 }
 
-void BackgroundThread::Continue()
+void BackgroundThread::Thread::Continue()
 {
 	while (!m_finsihed.empty())
 	{
@@ -41,7 +41,7 @@ void BackgroundThread::Continue()
 	}
 } 
 
-void BackgroundThread::Process()
+void BackgroundThread::Thread::Process()
 {
 	while (m_continue)
 	{
