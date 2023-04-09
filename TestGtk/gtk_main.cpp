@@ -99,7 +99,7 @@ MyWindow::MyWindow()
 	set_child(m_grid);
 
 	m_Threads.Start(std::bind(&MyWindow::notify,this));
-	m_dispatcher.connect(sigc::mem_fun(m_Threads, &BackgroundThread::Thread::Continue));
+	m_dispatcher.connect(sigc::mem_fun(m_Threads, &BackgroundThread::Thread::DoUiWork));
 }
 
 void MyWindow::notify()
@@ -116,7 +116,7 @@ int DelayedWork(int x, int y)
 
 void MyWindow::OnWorkDone(int x, int y, int result)
 {
-	std::stringstream meassage;
+	std::stringstream meassage{};
 	meassage << "Result for " << x << " * " << y << " = " << result << " on thread: " << std::this_thread::get_id() << std::endl;
 	m_list.remove(*m_list.get_first_child());
 	m_label_done.set_text(meassage.str());

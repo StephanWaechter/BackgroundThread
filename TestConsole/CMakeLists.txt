@@ -6,8 +6,11 @@ project(TestConsol VERSION 0.0.0)
 
 set(CMAKE_CXX_STANDARD 17)
 
-if(NOT TARGET SWTHREADING::BackgroundThread)
-    find_package(BackgroundThread CONFIG)
+if(TARGET SWTHREADING::BackgroundThread)
+    message(STATUS "using local")
+else()
+    message(STATUS "using package")
+    find_package(BackgroundThread CONFIG) 
 endif()
 
 add_executable(TestConsol  "console_main.cpp") 

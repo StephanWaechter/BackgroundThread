@@ -2,84 +2,62 @@
 #include <thread>
 #include <mutex>
 #include <functional>
+#include "TaskBase.hpp"
+#include "Thread.hpp"
 
 namespace BackgroundThread
 {
+	template<class TResult>
+	class Task : public TaskBase
+	{
+	using fprogress = std::function<void(double)>;
+	using fdone = std::function<void(TResult)>;
+	using fwork = std::function<void(fprogress, fdone)>;
+	public:
 
-class TaskBase
-{
-public:
-	virtual void Run() = 0;
-	virtual void Finalize() = 0;
-};
+		Task(
+			Thread& thread,
+			fwork work,
+			fprogress onProgress,
+			fdone onDone) :
+				m_thread{ thread },
+				m_work{ work },
+				m_onProgress{ onProgress },
+				m_onDone{ onDone } 
+		{};
+		Task(const Task& o) = default;
 
-template<class TResult>
-class Task : public TaskBase
-{
-public:
-	Task(
-		std::function<TResult(void)> work,
-		std::function<void(TResult)> finalize) :
-		m_work{work},
-		m_result{nullptr},
-		m_finalize{finalize} {};
+		void Run();
 
-	Task(const Task& o) :
-		m_work{ o.m_work },
-		m_finalize{ o.m_finalize },
-		m_result{ nullptr } {};
+	private:
+		Thread& m_thread;
+		fwork m_work;
+		fprogress m_onProgress;
+		fdone m_onDone;
 
-	void Run();
-	void Finalize();
+		void ForwardProgress(double progress);
+		void ForwardDone(TResult result);
+	};
 
-private:
-	std::unique_ptr<TResult> m_result;
-	std::function<TResult(void)> m_work;
-	std::function<void(TResult)> m_finalize;
-};
+	template<class TResult>
+	inline void Task<TResult>::Run()
+	{
+		m_work(
+			std::bind(&Task<TResult>::ForwardProgress, this, std::placeholders::_1),
+			std::bind(&Task<TResult>::ForwardDone, this, std::placeholders::_1)
+		);
+	}
 
-template<>
-class Task<void> : public TaskBase
-{
-public:
-	Task(
-		std::function<void()> work,
-		std::function<void()> finalize) :
-		m_work{ work },
-		m_finalize{ finalize } {};
+	template<class TResult>
+	inline void Task<TResult>::ForwardProgress(double progress)
+	{
+		m_thread.ForwardUiWork(std::packaged_task<void()>(std::bind(m_onProgress, progress)));
+	}
 
-	Task(const Task& o) :
-		m_work{ o.m_work },
-		m_finalize{ o.m_finalize } {};
-
-	void Run();
-	void Finalize();
-
-private:
-	std::function<void()> m_work;
-	std::function<void()> m_finalize;
-};
-
-inline void Task<void>::Run()
-{
-	m_work();
-}
-
-inline void Task<void>::Finalize()
-{
-	m_finalize();
-}
-
-template<class TResult>
-inline void Task<TResult>::Run()
-{
-	m_result = std::make_unique<TResult>( m_work() );
-}
-
-template<class TResult>
-inline void Task<TResult>::Finalize()
-{
-	m_finalize(*m_result);
-}
+	template<class TResult>
+	inline void Task<TResult>::ForwardDone(TResult result)
+	{
+		m_thread.ForwardUiWork(std::packaged_task<void()>(std::bind(m_onDone, result)));
+	}
 
 }

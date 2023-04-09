@@ -1,5 +1,6 @@
-#include <BackgroundThread/Thread.hpp>
 #include <iostream>
+#include <BackgroundThread/Thread.hpp>
+#include <BackgroundThread/Task.hpp>
 
 void BackgroundThread::Thread::Start(Notifier notifier)
 {
@@ -21,25 +22,31 @@ BackgroundThread::Thread::~Thread()
 		Stop();
 }
 
-void BackgroundThread::Thread::Add(ptrTaskBase const& worker)
+void BackgroundThread::Thread::AddTask(ptrTaskBase task)
 {
 	{
 		std::lock_guard<std::mutex> lock(m_mutex);
-		m_queue.push(worker);
+		m_queue.push(task);
 		std::cout << "BackgroundThread::Add: m_queue.size() " << m_queue.size() << std::endl;
 	}
 	m_cond_var.notify_one();
 }
 
-void BackgroundThread::Thread::Continue()
+void BackgroundThread::Thread::DoUiWork()
 {
-	while (!m_finsihed.empty())
+	while (!m_ui_work.empty())
 	{
-		auto& task = m_finsihed.front();
-		task->Finalize();
-		m_finsihed.pop();
+		auto& work = m_ui_work.front();
+		work();
+		m_ui_work.pop();
 	}
-} 
+}
+void BackgroundThread::Thread::ForwardUiWork(std::packaged_task<void()>& task)
+{
+	m_ui_work.push(std::move(task));
+	m_notifier();
+}
+
 
 void BackgroundThread::Thread::Process()
 {
