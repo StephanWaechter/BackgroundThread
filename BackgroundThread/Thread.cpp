@@ -38,8 +38,8 @@ void BackgroundThread::Thread::AddTask(ptrTaskBase task)
 	{
 		std::lock_guard<std::mutex> lock(m_mutex);
 		m_queue.push( task );
-		std::cout << "BackgroundThread::Add: m_queue.size() " << m_queue.size() << std::endl;
 	}
+	std::cout << "BackgroundThread::Add task " << " m_queue.size() = " << m_queue.size() << std::endl;
 	m_cond_var.notify_one();
 }
 
@@ -69,12 +69,13 @@ void BackgroundThread::Thread::Process()
 			std::unique_lock<std::mutex> lock(m_mutex);
 			m_cond_var.wait(lock, [&] { return !m_continue || !m_queue.empty(); });
 			if (!m_continue) {
-				std::cout << "BackgroundThread::Process: Exit Thread " << std::this_thread::get_id() << std::endl;
+				std::cout << "BackgroundThread::Process: Exit thread " << std::this_thread::get_id() << std::endl;
 				return;
 			}
 			currentTask = m_queue.front();
 			m_queue.pop();
 		}
+		std::cout << "BackgroundThread::Start work on thread: " << std::this_thread::get_id() << " m_queue.size() = " << m_queue.size() << std::endl;
 		currentTask->Run(this);
 	}
 }

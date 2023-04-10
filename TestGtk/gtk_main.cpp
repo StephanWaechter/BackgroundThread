@@ -136,8 +136,8 @@ MyWindow::MyWindow()
 	set_title("Basic application");
 	set_default_size(640, 480);
 	
-	AddButton(0, 0, "Task 5 seconds", 5);
-	AddButton(0, 1, "Task 3 seconds", 3);
+	AddButton(0, 0, "Task 3 seconds", 3);
+	AddButton(0, 1, "Task 5 seconds", 5);
 	AddButton(0, 2, "Task 10 seconds", 10);
 
 	m_grid.attach(m_list, 7, 0, 1, 6);
@@ -182,8 +182,6 @@ void MyWindow::OnWorkDoneText(int result)
 
 void MyWindow::on_clicked(int time_in_seconds)
 {
-	std::cout << "on_clicked on thread " << std::this_thread::get_id() << std::endl;
-	
 	auto task = BackgroundThread::Task<int>::CreateTask();
 
 	std::string text =std::to_string(time_in_seconds) + " seconds";
