@@ -42,7 +42,7 @@ void done(int result)
 int main()
 {
 	auto task = Task<int>::CreateTask(
-		bthread, work, progress, done
+		work, progress, done
 	);
 	bthread.Start(notify);
 	bthread.AddTask(task);

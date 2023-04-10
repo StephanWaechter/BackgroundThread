@@ -161,7 +161,6 @@ void MyWindow::on_clicked(int x, int y)
 	m_label.set_text(message.str());
 	m_Threads.AddTask( 
 		BackgroundThread::Task<int>::CreateTask(
-			m_Threads,
 			std::bind(&DelayedWork, x, y, std::placeholders::_1, std::placeholders::_2),
 			std::bind(&MyWindow::OnProgress, this, std::placeholders::_1),
 			std::bind(&MyWindow::OnWorkDone, this, x, y, std::placeholders::_1)

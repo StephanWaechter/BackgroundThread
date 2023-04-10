@@ -57,7 +57,7 @@ void BackgroundThread::Thread::Process()
 			m_cond_var.wait(lock, [&] { return !m_queue.empty(); });
 		}
 		auto& currentTask = m_queue.front();
-		currentTask->Run();
+		currentTask->Run(this);
 		m_finsihed.push(currentTask);
 		if(m_notifier != nullptr) m_notifier();
 		m_queue.pop();
