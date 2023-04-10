@@ -21,9 +21,9 @@ using namespace BackgroundThread;
 void DelayedWork(int x, int y, std::function<void(double)> progress, std::function<void(int)> done)
 {
 	std::cout << "Running " << x << " * " << y << " on thread: " << std::this_thread::get_id() << std::endl;
-	for (int k = 0; k < 20; k++)
+	for (int k = 0; k < 50; k++)
 	{
-		progress(k / 20.0);
+		progress(k / 50.0);
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	}
 

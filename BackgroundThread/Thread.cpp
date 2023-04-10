@@ -6,14 +6,25 @@ void BackgroundThread::Thread::Start(Notifier notifier)
 {
 	m_continue = true;
 	m_notifier = notifier;
-	if (m_thread == nullptr)
-		m_thread = std::make_unique<std::thread>(&BackgroundThread::Thread::Process, this);
+	const uint32_t num_threads = 4;
+	m_thread.resize(num_threads);
+	for (uint32_t i = 0; i < num_threads; i++) 
+	{
+		m_thread.at(i) = std::thread(std::bind( & Thread::Process, this));
+	}
 }
 
 void BackgroundThread::Thread::Stop()
 {
-	m_continue = false;
-	m_thread->join();
+	{
+		std::unique_lock<std::mutex> lock(m_mutex);
+		m_continue = false;
+	}
+	m_cond_var.notify_all();
+	for (std::thread& active_thread : m_thread) {
+		active_thread.join();
+	}
+	m_thread.clear();
 }
 
 BackgroundThread::Thread::~Thread()
@@ -43,24 +54,28 @@ void BackgroundThread::Thread::DoUiWork()
 }
 void BackgroundThread::Thread::ForwardUiWork(std::packaged_task<void()>& task)
 {
+	std::lock_guard<std::mutex> lock(m_ui_mutex);
 	m_ui_work.push(std::move(task));
 	m_notifier();
 }
 
-
 void BackgroundThread::Thread::Process()
 {
-	while (m_continue)
+	while (true)
 	{
+		ptrTaskBase currentTask;
 		{
 			std::unique_lock<std::mutex> lock(m_mutex);
 			m_cond_var.wait(lock, [&] { return !m_queue.empty(); });
+			if (!m_continue) {
+				return;
+			}
+			currentTask = m_queue.front();
+			m_queue.pop();
 		}
-		auto& currentTask = m_queue.front();
 		currentTask->Run(this);
-		m_finsihed.push(currentTask);
-		if(m_notifier != nullptr) m_notifier();
-		m_queue.pop();
+		
+
 		std::cout << "BackgroundThread::Process: m_queue.size() " << m_queue.size() << std::endl;
 	}
 }

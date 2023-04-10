@@ -27,13 +27,13 @@ namespace BackgroundThread
 	private:
 		void Process();
 
-		Notifier m_notifier;
-		std::condition_variable m_cond_var;
-		std::mutex m_mutex;
 		bool m_continue;
+		Notifier m_notifier;
+		std::mutex m_mutex;
+		std::mutex m_ui_mutex;
+		std::condition_variable m_cond_var;
 		std::queue<ptrTaskBase> m_queue;
-		std::queue<ptrTaskBase> m_finsihed;
-		std::unique_ptr<std::thread> m_thread;
+		std::vector<std::thread> m_thread;
 		std::queue<std::packaged_task<void()>> m_ui_work;
 	};
 
