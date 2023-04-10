@@ -41,14 +41,12 @@ void done(int result)
 
 int main()
 {
-	bthread.Start(notify);
-	bthread.AddTask(
-		std::make_shared<Task<int>>(
-			Task<int>(
-				bthread,work,progress,done)
-			)
+	auto task = Task<int>::CreateTask(
+		bthread, work, progress, done
 	);
-	
+	bthread.Start(notify);
+	bthread.AddTask(task);
+
 	std::string line;
 	std::getline(std::cin, line);
 	bthread.Stop();

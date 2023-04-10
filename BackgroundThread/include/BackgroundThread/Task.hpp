@@ -14,17 +14,24 @@ namespace BackgroundThread
 	using fdone = std::function<void(TResult)>;
 	using fwork = std::function<void(fprogress, fdone)>;
 	public:
-
-		Task(
+		static ptrTaskBase inline CreateTask(
 			Thread& thread,
 			fwork work,
 			fprogress onProgress,
-			fdone onDone) :
-				m_thread{ thread },
-				m_work{ work },
-				m_onProgress{ onProgress },
-				m_onDone{ onDone } 
-		{};
+			fdone onDone) 
+		{
+			return std::make_shared<Task<TResult>>(
+				Task<TResult>(
+					thread,
+					work,
+					onProgress,
+					onDone
+					)
+				);
+		};
+
+
+		
 		Task(const Task& o) = default;
 
 		void Run();
@@ -34,6 +41,16 @@ namespace BackgroundThread
 		fwork m_work;
 		fprogress m_onProgress;
 		fdone m_onDone;
+
+		Task(
+			Thread& thread,
+			fwork work,
+			fprogress onProgress,
+			fdone onDone) :
+			m_thread{ thread },
+			m_work{ work },
+			m_onProgress{ onProgress },
+			m_onDone{ onDone } {};
 
 		void ForwardProgress(double progress);
 		void ForwardDone(TResult result);

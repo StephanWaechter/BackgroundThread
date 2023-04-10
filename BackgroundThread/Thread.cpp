@@ -26,7 +26,7 @@ void BackgroundThread::Thread::AddTask(ptrTaskBase task)
 {
 	{
 		std::lock_guard<std::mutex> lock(m_mutex);
-		m_queue.push(task);
+		m_queue.push( task );
 		std::cout << "BackgroundThread::Add: m_queue.size() " << m_queue.size() << std::endl;
 	}
 	m_cond_var.notify_one();

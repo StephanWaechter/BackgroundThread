@@ -7,13 +7,20 @@
 #include <gtkmm/label.h>
 #include <gtkmm/cssprovider.h>
 #include <gtkmm/listbox.h>
+#include <gtkmm/progressbar.h>
 #include <glibmm/dispatcher.h>
 #include <iostream>
 #include <BackgroundThread/Thread.hpp>
+#include <BackgroundThread/Task.hpp>
 #include <future>
 
 using namespace Glib;
 using namespace Gtk;
+
+class Progress : public Gtk::Widget
+{
+
+};
 
 class MyThumb : public Gtk::Button
 {
@@ -43,6 +50,7 @@ class MyWindow : public Gtk::Window
 public:
 	MyWindow();
 	void on_clicked(int x, int y);
+	void OnProgress(double progress);
 	void OnWorkDone(int x, int y, int result);
 
 protected:
@@ -107,11 +115,17 @@ void MyWindow::notify()
 	m_dispatcher.emit();
 }
 
-int DelayedWork(int x, int y)
+void DelayedWork(int x, int y, std::function<void(double)> progress, std::function<void(int)> done)
 {
 	std::cout << "Running " << x << " * " << y << " on thread: " << std::this_thread::get_id() << std::endl;
-	std::this_thread::sleep_for(std::chrono::seconds(3));
-	return x * y;
+	for (int k = 0; k < 100; k++)
+	{
+		progress(k / 100.0);
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	}
+	
+	done(x * y);
+	return;
 }
 
 void MyWindow::OnWorkDone(int x, int y, int result)
@@ -123,6 +137,17 @@ void MyWindow::OnWorkDone(int x, int y, int result)
 	std::cout << meassage.str();
 }
 
+void MyWindow::OnProgress(double progress)
+{
+	std::stringstream meassage{};
+	meassage << progress << std::endl;
+	std::cout << meassage.str();
+	auto widgit = m_list.get_first_child();
+	// Obviously uggly just for demonstration
+	auto bar = static_cast<Gtk::ProgressBar*> ( widgit->get_first_child() );
+	bar->set_fraction(progress);
+}
+
 void MyWindow::on_clicked(int x, int y)
 {
 	std::stringstream message;
@@ -131,15 +156,15 @@ void MyWindow::on_clicked(int x, int y)
 	
 	std::stringstream listitemtext;
 	listitemtext << "Running: " << x << " * " << y << std::endl;
-	m_list.append(Gtk::Label(listitemtext.str()));
+	m_list.append(Gtk::ProgressBar());
 
 	m_label.set_text(message.str());
-	m_Threads.Add(
-		std::make_shared<BackgroundThread::Task<int>>(
-			BackgroundThread::Task<int>(
-				std::bind(&DelayedWork, x, y),
-				std::bind(&MyWindow::OnWorkDone, this, x, y, std::placeholders::_1)
-				)
+	m_Threads.AddTask( 
+		BackgroundThread::Task<int>::CreateTask(
+			m_Threads,
+			std::bind(&DelayedWork, x, y, std::placeholders::_1, std::placeholders::_2),
+			std::bind(&MyWindow::OnProgress, this, std::placeholders::_1),
+			std::bind(&MyWindow::OnWorkDone, this, x, y, std::placeholders::_1)
 			)
 	);
 }
