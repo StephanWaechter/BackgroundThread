@@ -61,21 +61,20 @@ void BackgroundThread::Thread::ForwardUiWork(std::packaged_task<void()>& task)
 
 void BackgroundThread::Thread::Process()
 {
+	std::cout << "BackgroundThread::Process: Start Thread " << std::this_thread::get_id() << std::endl;
 	while (true)
 	{
 		ptrTaskBase currentTask;
 		{
 			std::unique_lock<std::mutex> lock(m_mutex);
-			m_cond_var.wait(lock, [&] { return !m_queue.empty(); });
+			m_cond_var.wait(lock, [&] { return !m_continue || !m_queue.empty(); });
 			if (!m_continue) {
+				std::cout << "BackgroundThread::Process: Exit Thread " << std::this_thread::get_id() << std::endl;
 				return;
 			}
 			currentTask = m_queue.front();
 			m_queue.pop();
 		}
 		currentTask->Run(this);
-		
-
-		std::cout << "BackgroundThread::Process: m_queue.size() " << m_queue.size() << std::endl;
 	}
 }
