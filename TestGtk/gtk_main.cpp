@@ -18,16 +18,17 @@ using namespace Glib;
 using namespace Gtk;
 using namespace BackgroundThread;
 
-void DelayedWork(int x, int y, std::function<void(double)> progress, std::function<void(int)> done)
+void DelayedWork(int time_in_seconds, std::function<void(double)> progress, std::function<void(int)> done)
 {
-	std::cout << "Running " << x << " * " << y << " on thread: " << std::this_thread::get_id() << std::endl;
-	for (int k = 0; k < 50; k++)
+	std::cout << "Running " << time_in_seconds << " on thread: " << std::this_thread::get_id() << std::endl;
+	int N = time_in_seconds * 10;
+	for (int k = 0; k < N; k++)
 	{
-		progress(k / 50.0);
+		progress(k / double(N));
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	}
 
-	done(x * y);
+	done(2<<N);
 	return;
 }
 
@@ -99,7 +100,7 @@ class MyWindow : public Gtk::Window
 {
 public:
 	MyWindow();
-	void on_clicked(int x, int y);
+	void on_clicked(int time_in_seconds);
 	void OnProgress(MyProgress* progress, double fraction);
 	void OnWorkDone(MyProgress* progress, Gtk::Widget* row, int result);
 	void OnProgressText(double fraction);
@@ -108,8 +109,6 @@ public:
 protected:
 	std::vector<MyThumb> thumbs;
 	Gtk::Grid m_grid;
-	Gtk::Label m_label;
-	Gtk::Label m_label_done;
 	Gtk::ListBox m_list;
 	MyProgress m_Progress;
 
@@ -118,45 +117,29 @@ protected:
 	Glib::Dispatcher m_dispatcher;
 	BackgroundThread::Thread m_Threads;
 	std::list<MyProgress*> m_ProgressVector;
+
+private:
+	void AddButton(int row, int column, std::string const& label, int time);
 };
+
+void MyWindow::AddButton(int row, int column, std::string const& label, int time)
+{
+	thumbs.push_back(MyThumb(label));
+	thumbs.back().signal_clicked().connect(
+		sigc::bind(sigc::mem_fun(*this, &MyWindow::on_clicked), time)
+	);
+	m_grid.attach(thumbs.back(), row, column);
+}
 
 MyWindow::MyWindow()
 {
 	set_title("Basic application");
 	set_default_size(640, 480);
 	
-	for(int x = 1; x <= 5; x++)
-	{
-		for (int y = 1; y <= 5; y++)
-		{	
-			int row = y - 1;
-			int col = x - 1;
-			
-			std::string text = "Buton " + std::to_string(x) + "/" + std::to_string(y);
-			Glib::ustring data = "Buton " + std::to_string(x) + "/" + std::to_string(y) + " was clicked";
+	AddButton(0, 0, "Task 5 seconds", 5);
+	AddButton(0, 1, "Task 3 seconds", 3);
+	AddButton(0, 2, "Task 10 seconds", 10);
 
-			thumbs.push_back(MyThumb(text));
-			thumbs.back().signal_clicked().connect(
-				sigc::bind(sigc::mem_fun(*this, &MyWindow::on_clicked), x, y)
-			);
-			m_grid.attach(thumbs.back(), row, col);
-		}
-	}
-	Glib::RefPtr<Gtk::CssProvider> css_provider = Gtk::CssProvider::create();
-	css_provider->load_from_data("label {background-color: cyan;}");
-	m_label.get_style_context()->add_provider(
-		css_provider, GTK_STYLE_PROVIDER_PRIORITY_USER);
-	m_label.set_size_request(-1, 30);
-	m_grid.attach(m_label, 0, 6, 6);
-
-	css_provider = Gtk::CssProvider::create();
-	css_provider->load_from_data("label {background-color: red;}");
-	m_label_done.get_style_context()->add_provider(
-		css_provider, GTK_STYLE_PROVIDER_PRIORITY_USER);
-	m_label_done.set_size_request(-1, 30);
-	m_grid.attach(m_label_done, 0, 7, 7);
-
-	
 	m_grid.attach(m_list, 7, 0, 1, 6);
 	
 	set_child(m_grid);
@@ -167,19 +150,16 @@ MyWindow::MyWindow()
 
 void MyWindow::notify()
 {
-	std::cout << "Notify on thread " << std::this_thread::get_id() << std::endl;
 	m_dispatcher.emit();
 }
 
 void MyWindow::DoUiWork()
 {
-	std::cout << "DoUiWork on thread " << std::this_thread::get_id() << std::endl;
 	m_Threads.DoUiWork();
 }
 
 void MyWindow::OnProgress(MyProgress* progress, double fraction)
 {
-	std::cout << "OnProgress on thread " << std::this_thread::get_id() << std::endl;
 	progress->set_fraction(fraction);
 }
 
@@ -198,18 +178,15 @@ void MyWindow::OnProgressText(double fraction)
 void MyWindow::OnWorkDoneText(int result)
 {
 	std::cout << result << std::endl;
-	m_label_done.set_text(std::to_string(result));
 }
 
-
-void MyWindow::on_clicked(int x, int y)
+void MyWindow::on_clicked(int time_in_seconds)
 {
 	std::cout << "on_clicked on thread " << std::this_thread::get_id() << std::endl;
 	
 	auto task = BackgroundThread::Task<int>::CreateTask();
 
-	std::string text = std::to_string(x) + " * " + std::to_string(y);
-	
+	std::string text =std::to_string(time_in_seconds) + " seconds";
 	
 	MyProgress* progress = new MyProgress();
 
@@ -217,7 +194,7 @@ void MyWindow::on_clicked(int x, int y)
 	m_list.append(progress->get_widget());
 	auto row = m_list.get_last_child();
 
-	auto fwork = std::bind(&DelayedWork, x, y, std::placeholders::_1, std::placeholders::_2);
+	auto fwork = std::bind(&DelayedWork, time_in_seconds, std::placeholders::_1, std::placeholders::_2);
 	auto fprogress = std::bind(&MyWindow::OnProgress, this, progress, std::placeholders::_1);
 	auto fdone = std::bind(&MyWindow::OnWorkDone, this, progress, row, std::placeholders::_1);
 	task->set_Work(fwork);
