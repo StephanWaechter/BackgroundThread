@@ -16,11 +16,61 @@
 
 using namespace Glib;
 using namespace Gtk;
+using namespace BackgroundThread;
 
-class Progress : public Gtk::Widget
+void DelayedWork(int x, int y, std::function<void(double)> progress, std::function<void(int)> done)
 {
+	std::cout << "Running " << x << " * " << y << " on thread: " << std::this_thread::get_id() << std::endl;
+	for (int k = 0; k < 20; k++)
+	{
+		progress(k / 20.0);
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	}
 
+	done(x * y);
+	return;
+}
+
+class MyProgress
+{
+public:
+	MyProgress();
+	Gtk::Widget & get_widget() { return m_Grid; }
+	void set_label(std::string& string);
+	void set_task(ptrTaskBase task);
+	void set_fraction(double fraction);
+
+private:
+	Gtk::Grid m_Grid;
+	Gtk::Label m_Label;
+	Gtk::ProgressBar m_ProgressBar;
+	Gtk::Button m_Button;
+	ptrTaskBase m_Task;
 };
+
+MyProgress::MyProgress() 
+{
+	m_Task = nullptr;
+	m_Button.set_child(Gtk::Label("X"));
+	m_Grid.attach(m_Label, 0, 0);
+	m_Grid.attach(m_ProgressBar, 1, 0);
+	m_Grid.attach(m_Button, 2, 0);
+}
+
+void MyProgress::set_label(std::string& string)
+{
+	m_Label.set_text(string);
+}
+
+void MyProgress::set_task(ptrTaskBase task)
+{
+	m_Task = task;
+}
+
+void MyProgress::set_fraction(double fraction)
+{
+	m_ProgressBar.set_fraction(fraction);
+}
 
 class MyThumb : public Gtk::Button
 {
@@ -50,8 +100,10 @@ class MyWindow : public Gtk::Window
 public:
 	MyWindow();
 	void on_clicked(int x, int y);
-	void OnProgress(double progress);
-	void OnWorkDone(int x, int y, int result);
+	void OnProgress(MyProgress* progress, double fraction);
+	void OnWorkDone(MyProgress* progress, Gtk::Widget* row, int result);
+	void OnProgressText(double fraction);
+	void OnWorkDoneText(int result);
 
 protected:
 	std::vector<MyThumb> thumbs;
@@ -59,10 +111,13 @@ protected:
 	Gtk::Label m_label;
 	Gtk::Label m_label_done;
 	Gtk::ListBox m_list;
+	MyProgress m_Progress;
 
 	void notify();
+	void DoUiWork();
 	Glib::Dispatcher m_dispatcher;
 	BackgroundThread::Thread m_Threads;
+	std::list<MyProgress*> m_ProgressVector;
 };
 
 MyWindow::MyWindow()
@@ -107,67 +162,72 @@ MyWindow::MyWindow()
 	set_child(m_grid);
 
 	m_Threads.Start(std::bind(&MyWindow::notify,this));
-	m_dispatcher.connect(sigc::mem_fun(m_Threads, &BackgroundThread::Thread::DoUiWork));
+	m_dispatcher.connect(sigc::mem_fun(*this, &MyWindow::DoUiWork));
 }
 
 void MyWindow::notify()
 {
+	std::cout << "Notify on thread " << std::this_thread::get_id() << std::endl;
 	m_dispatcher.emit();
 }
 
-void DelayedWork(int x, int y, std::function<void(double)> progress, std::function<void(int)> done)
+void MyWindow::DoUiWork()
 {
-	std::cout << "Running " << x << " * " << y << " on thread: " << std::this_thread::get_id() << std::endl;
-	for (int k = 0; k < 100; k++)
-	{
-		progress(k / 100.0);
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
-	}
-	
-	done(x * y);
-	return;
+	std::cout << "DoUiWork on thread " << std::this_thread::get_id() << std::endl;
+	m_Threads.DoUiWork();
 }
 
-void MyWindow::OnWorkDone(int x, int y, int result)
+void MyWindow::OnProgress(MyProgress* progress, double fraction)
 {
-	std::stringstream meassage{};
-	meassage << "Result for " << x << " * " << y << " = " << result << " on thread: " << std::this_thread::get_id() << std::endl;
-	m_list.remove(*m_list.get_first_child());
-	m_label_done.set_text(meassage.str());
-	std::cout << meassage.str();
+	std::cout << "OnProgress on thread " << std::this_thread::get_id() << std::endl;
+	progress->set_fraction(fraction);
 }
 
-void MyWindow::OnProgress(double progress)
+void MyWindow::OnWorkDone(MyProgress* progress, Gtk::Widget* row, int result)
 {
-	std::stringstream meassage{};
-	meassage << progress << std::endl;
-	std::cout << meassage.str();
-	auto widgit = m_list.get_first_child();
-	// Obviously uggly just for demonstration
-	auto bar = static_cast<Gtk::ProgressBar*> ( widgit->get_first_child() );
-	bar->set_fraction(progress);
+	progress->set_fraction(1.0);
+	m_list.remove(*row);
+	delete progress;
 }
+
+void MyWindow::OnProgressText(double fraction)
+{
+	std::cout << fraction << std::endl;
+}
+
+void MyWindow::OnWorkDoneText(int result)
+{
+	std::cout << result << std::endl;
+	m_label_done.set_text(std::to_string(result));
+}
+
 
 void MyWindow::on_clicked(int x, int y)
 {
-	std::stringstream message;
-	message << "Clicked " << x << " * " << y << " on thread " << std::this_thread::get_id() << std::endl;
-	std::cout << message.str();
+	std::cout << "on_clicked on thread " << std::this_thread::get_id() << std::endl;
 	
-	std::stringstream listitemtext;
-	listitemtext << "Running: " << x << " * " << y << std::endl;
-	m_list.append(Gtk::ProgressBar());
+	auto task = BackgroundThread::Task<int>::CreateTask();
 
-	m_label.set_text(message.str());
-	m_Threads.AddTask( 
-		BackgroundThread::Task<int>::CreateTask(
-			std::bind(&DelayedWork, x, y, std::placeholders::_1, std::placeholders::_2),
-			std::bind(&MyWindow::OnProgress, this, std::placeholders::_1),
-			std::bind(&MyWindow::OnWorkDone, this, x, y, std::placeholders::_1)
-			)
+	std::string text = std::to_string(x) + " * " + std::to_string(y);
+	
+	
+	MyProgress* progress = new MyProgress();
+
+	progress->set_label(text);
+	m_list.append(progress->get_widget());
+	auto row = m_list.get_last_child();
+
+	auto fwork = std::bind(&DelayedWork, x, y, std::placeholders::_1, std::placeholders::_2);
+	auto fprogress = std::bind(&MyWindow::OnProgress, this, progress, std::placeholders::_1);
+	auto fdone = std::bind(&MyWindow::OnWorkDone, this, progress, row, std::placeholders::_1);
+	task->set_Work(fwork);
+	task->set_Progress(fprogress);
+	task->set_Done(fdone);
+
+	m_Threads.AddTask(
+		task
 	);
 }
-
 
 
 int main(int argc, char* argv[])

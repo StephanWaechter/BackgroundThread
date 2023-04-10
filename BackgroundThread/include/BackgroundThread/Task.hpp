@@ -14,17 +14,10 @@ namespace BackgroundThread
 	using fdone = std::function<void(TResult)>;
 	using fwork = std::function<void(fprogress, fdone)>;
 	public:
-		static ptrTaskBase inline CreateTask(
-			fwork work,
-			fprogress onProgress,
-			fdone onDone) 
+		static std::shared_ptr<Task<TResult>> inline CreateTask()
 		{
 			return std::make_shared<Task<TResult>>(
-				Task<TResult>(
-					work,
-					onProgress,
-					onDone
-					)
+				Task<TResult>()
 				);
 		};
 
@@ -32,22 +25,42 @@ namespace BackgroundThread
 
 		void Run(Thread* thread);
 
+		void set_Work(fwork work);
+		void set_Progress(fprogress progress);
+		void set_Done(fdone done);
+
 	private:
 		fwork m_work;
 		fprogress m_onProgress;
 		fdone m_onDone;
 
-		Task(
-			fwork work,
-			fprogress onProgress,
-			fdone onDone) :
-			m_work{ work },
-			m_onProgress{ onProgress },
-			m_onDone{ onDone } {};
+		Task() :
+			m_work{ nullptr },
+			m_onProgress{ nullptr },
+			m_onDone{ nullptr } {};
 
 		void ForwardProgress(Thread* thread, double progress);
 		void ForwardDone(Thread* thread, TResult result);
 	};
+
+	template<class TResult>
+	inline void BackgroundThread::Task<TResult>::set_Work(Task<TResult>::fwork work)
+	{
+		m_work = work;
+	}
+
+	template<class TResult>
+	inline void BackgroundThread::Task<TResult>::set_Progress(Task<TResult>::fprogress progress)
+	{
+		m_onProgress = progress;
+	}
+
+	template<class TResult>
+	inline void BackgroundThread::Task<TResult>::set_Done(Task<TResult>::fdone done)
+	{
+		m_onDone = done;
+	}
+
 
 	template<class TResult>
 	inline void Task<TResult>::Run(Thread* thread)

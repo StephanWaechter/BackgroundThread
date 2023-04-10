@@ -41,9 +41,11 @@ void done(int result)
 
 int main()
 {
-	auto task = Task<int>::CreateTask(
-		work, progress, done
-	);
+	auto task = Task<int>::CreateTask();
+	task->set_Work(work);
+	task->set_Progress(progress);
+	task->set_Done(done);
+
 	bthread.Start(notify);
 	bthread.AddTask(task);
 
