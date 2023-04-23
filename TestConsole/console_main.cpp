@@ -34,9 +34,9 @@ void progress(double progres)
 	std::cout << "Progress: " << progress << " " << std::this_thread::get_id() << std::endl;
 }
 
-void done(int result)
+void done(std::shared_future<int> result)
 {
-		std::cout << "Result: " << result << std::endl;
+		std::cout << "Result: " << result.get() << std::endl;
 }
 
 int main()

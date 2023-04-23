@@ -1,14 +1,5 @@
-#include <gtkmm/application.h>
-#include <gtkmm/window.h>
-#include <gtkmm/button.h>
-#include <gtkmm/box.h>
-#include <gtkmm/grid.h>
-#include <gtkmm/image.h>
-#include <gtkmm/label.h>
-#include <gtkmm/cssprovider.h>
-#include <gtkmm/listbox.h>
-#include <gtkmm/progressbar.h>
-#include <glibmm/dispatcher.h>
+#include <gtkmm.h>
+#include <glibmm.h>
 #include <iostream>
 #include <BackgroundThread/Thread.hpp>
 #include <BackgroundThread/Task.hpp>
@@ -28,7 +19,7 @@ int DelayedWork(int time_in_seconds, std::function<void(double)> progress, Backg
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		token->ThrowIfAborted();
 	}
-	return (2 << N);
+	return (time_in_seconds);
 }
 
 class MyProgress
@@ -93,19 +84,44 @@ void MyThumb::Setup(Glib::ustring const& label)
 	return;
 };
 
+void progress(double progress)
+{
+	Glib::signal_idle().connect(
+		[=] {
+			std::cout << progress << std::endl;
+			return false;
+		}
+	);
+}
+
+void worker()
+{
+	for(int k = 0; k < 20; k++)
+	{
+		std::this_thread::sleep_for(std::chrono::milliseconds(200));
+		progress(k);
+	}	
+}
+
 class MyWindow : public Gtk::Window
 {
 public:
 	MyWindow();
 	void on_clicked(int time_in_seconds);
 	void OnProgress(MyProgress* progress, double fraction);
-	void OnWorkDone(MyProgress* progress, Gtk::Widget* row, int result);
+	void OnWorkDone(MyProgress* progress, Gtk::Widget* row, std::shared_future<int> result);
 	void CleanUpProgress(MyProgress* progress, Gtk::Widget* row);
+
+	void Test(void){
+		std::thread thread(worker);
+		thread.detach();
+	};
 
 protected:
 	std::vector<MyThumb> thumbs;
 	Gtk::Grid m_grid;
 	Gtk::ListBox m_list;
+	Gtk::Statusbar m_statusbar;
 
 	void notify();
 	void DoUiWork();
@@ -135,9 +151,12 @@ MyWindow::MyWindow()
 	AddButton(0, 0, "Task 3 seconds", 3);
 	AddButton(0, 1, "Task 5 seconds", 5);
 	AddButton(0, 2, "Task 10 seconds", 10);
+
 	m_list.set_selection_mode(Gtk::SelectionMode::NONE);
-	m_grid.attach(m_list, 7, 0, 1, 6);
+	m_grid.attach(m_list, 1, 0, 1, 3);
 	
+	m_grid.attach(m_statusbar, 0, 3, 2, 1);
+
 	set_child(m_grid);
 
 	m_Threads.Start(std::bind(&MyWindow::notify,this));
@@ -159,9 +178,25 @@ void MyWindow::OnProgress(MyProgress* progress, double fraction)
 	progress->set_fraction(fraction);
 }
 
-void MyWindow::OnWorkDone(MyProgress* progress, Gtk::Widget* row, int result)
+void MyWindow::OnWorkDone(MyProgress* progress, Gtk::Widget* row, std::shared_future<int> result)
 {
-	CleanUpProgress(progress, row);
+	
+	try
+	{
+		auto str = std::to_string(result.get());
+		std::string message = "Task with " + str + "s endend";
+		m_statusbar.push(message, 0);
+		CleanUpProgress(progress, row);
+	}
+	catch (BackgroundThread::AbortedException)
+	{
+
+	}
+	catch (...)
+	{
+		CleanUpProgress(progress, row);
+		throw;
+	}
 }
 
 void MyWindow::CleanUpProgress(MyProgress* progress, Gtk::Widget* row)

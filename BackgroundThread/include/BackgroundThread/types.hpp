@@ -10,8 +10,6 @@ namespace BackgroundThread
 		AbortedException(std::string const& msg) : std::runtime_error(msg) {};
 	};
 
-	using t_abourt = std::function<void(bool)>;
-	using t_abourted = std::function<bool(void)>;
 	using t_task = std::function<void(void)>;
 	using t_forward_task = std::function<void(t_task)>;
 	using t_tasklet = std::function<void(t_forward_task)>;

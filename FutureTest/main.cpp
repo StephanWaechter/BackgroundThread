@@ -40,6 +40,8 @@ void done(Result result)
 
 int main()
 {
+	std::promise<double> result;
+
 	std::cout << "Main: " << std::this_thread::get_id() << std::endl;
 	
 	std::thread(std::bind(work, progress, done)).detach();
