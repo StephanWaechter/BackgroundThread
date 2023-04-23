@@ -14,10 +14,6 @@ struct Result {
 	}
 };
 
-using fprogress = std::function<void(double)>;
-using fdone = std::function<void(Result&)>;
-using fwork = std::function<void(fprogress, fdone)>;
-
 void work(std::function<void(double)> progress, std::function<void(Result)> done)
 {
 	std::cout << "Work: " << std::this_thread::get_id() << std::endl;

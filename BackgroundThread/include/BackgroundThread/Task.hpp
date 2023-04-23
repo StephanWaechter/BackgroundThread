@@ -1,86 +1,56 @@
 #pragma once
-#include <thread>
-#include <mutex>
-#include <functional>
-#include "TaskBase.hpp"
-#include "Thread.hpp"
+#include "Token.hpp"
+#include "types.hpp"
 
 namespace BackgroundThread
 {
-	template<class TResult>
-	class Task : public TaskBase
+	template<class TResult> t_tasklet CreateTask(
+		std::function<TResult(std::function<void(double)>)> work,
+		std::function<void(double)> onProgress,
+		std::function<void(TResult)> onDone
+	)
 	{
-	using fprogress = std::function<void(double)>;
-	using fdone = std::function<void(TResult)>;
-	using fwork = std::function<void(fprogress, fdone)>;
-	public:
-		static std::shared_ptr<Task<TResult>> inline CreateTask()
+		return [=](t_forward_task forward_task)
 		{
-			return std::make_shared<Task<TResult>>(
-				Task<TResult>()
+			auto update_progress = [=](double progress)
+			{
+				forward_task(
+					t_task(
+						[=]() { onProgress(progress); }
+					)
 				);
+			};
+			TResult result = work(update_progress);
+			forward_task([=]() { onDone(result); });
 		};
-
-		Task(const Task& o) = default;
-
-		void Run(Thread* thread);
-
-		void set_Work(fwork work);
-		void set_Progress(fprogress progress);
-		void set_Done(fdone done);
-
-	private:
-		fwork m_work;
-		fprogress m_onProgress;
-		fdone m_onDone;
-
-		Task() :
-			m_work{ nullptr },
-			m_onProgress{ nullptr },
-			m_onDone{ nullptr } {};
-
-		void ForwardProgress(Thread* thread, double progress);
-		void ForwardDone(Thread* thread, TResult result);
 	};
 
-	template<class TResult>
-	inline void BackgroundThread::Task<TResult>::set_Work(Task<TResult>::fwork work)
+	template<class TResult> t_tasklet CreateTask(
+		std::function<TResult(std::function<void(double)>, Token* token)> work,
+		std::function<void(double)> onProgress,
+		std::function<void(TResult)> onDone,
+		std::shared_ptr<Token> token
+	)
 	{
-		m_work = work;
-	}
+		return [=](t_forward_task forward_task)
+		{
+			auto update_progress = [=](double progress)
+			{
+				forward_task([=]() { onProgress(progress); });
+			};
+			
+			if(!token->is_Aborted())
+			{
+				try
+				{
+					TResult result = work(update_progress, token.get());
+					forward_task([=]() { onDone(result); });
+				}
+				catch(AbortedException const& e)
+				{
 
-	template<class TResult>
-	inline void BackgroundThread::Task<TResult>::set_Progress(Task<TResult>::fprogress progress)
-	{
-		m_onProgress = progress;
-	}
-
-	template<class TResult>
-	inline void BackgroundThread::Task<TResult>::set_Done(Task<TResult>::fdone done)
-	{
-		m_onDone = done;
-	}
-
-
-	template<class TResult>
-	inline void Task<TResult>::Run(Thread* thread)
-	{
-		m_work(
-			std::bind(&Task<TResult>::ForwardProgress, this, thread, std::placeholders::_1),
-			std::bind(&Task<TResult>::ForwardDone, this, thread, std::placeholders::_1)
-		);
-	}
-
-	template<class TResult>
-	inline void Task<TResult>::ForwardProgress(Thread* thread, double progress)
-	{
-		thread->ForwardUiWork(std::packaged_task<void()>(std::bind(m_onProgress, progress)));
-	}
-
-	template<class TResult>
-	inline void Task<TResult>::ForwardDone(Thread* thread, TResult result)
-	{
-		thread->ForwardUiWork(std::packaged_task<void()>(std::bind(m_onDone, result)));
-	}
-
+				}
+			}
+		};
+	};
 }

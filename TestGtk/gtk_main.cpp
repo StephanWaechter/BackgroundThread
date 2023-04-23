@@ -18,7 +18,7 @@ using namespace Glib;
 using namespace Gtk;
 using namespace BackgroundThread;
 
-void DelayedWork(int time_in_seconds, std::function<void(double)> progress, std::function<void(int)> done)
+int DelayedWork(int time_in_seconds, std::function<void(double)> progress, BackgroundThread::Token * token)
 {
 	std::cout << "Running " << time_in_seconds << " on thread: " << std::this_thread::get_id() << std::endl;
 	int N = time_in_seconds * 10;
@@ -26,10 +26,9 @@ void DelayedWork(int time_in_seconds, std::function<void(double)> progress, std:
 	{
 		progress(k / double(N));
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		token->ThrowIfAborted();
 	}
-
-	done(2<<N);
-	return;
+	return (2 << N);
 }
 
 class MyProgress
@@ -38,20 +37,23 @@ public:
 	MyProgress();
 	Gtk::Widget & get_widget() { return m_Grid; }
 	void set_label(std::string& string);
-	void set_task(ptrTaskBase task);
 	void set_fraction(double fraction);
+	void set_Token(std::shared_ptr<Token> token) { m_Token = token; }
+	auto get_AbortButtonClicked()
+	{
+		return m_Button.signal_clicked();
+	}
 
 private:
 	Gtk::Grid m_Grid;
 	Gtk::Label m_Label;
 	Gtk::ProgressBar m_ProgressBar;
 	Gtk::Button m_Button;
-	ptrTaskBase m_Task;
+	std::shared_ptr<Token> m_Token;
 };
 
-MyProgress::MyProgress() 
+MyProgress::MyProgress()
 {
-	m_Task = nullptr;
 	m_Button.set_child(Gtk::Label("X"));
 	m_Grid.attach(m_Label, 0, 0);
 	m_Grid.attach(m_ProgressBar, 1, 0);
@@ -61,11 +63,6 @@ MyProgress::MyProgress()
 void MyProgress::set_label(std::string& string)
 {
 	m_Label.set_text(string);
-}
-
-void MyProgress::set_task(ptrTaskBase task)
-{
-	m_Task = task;
 }
 
 void MyProgress::set_fraction(double fraction)
@@ -103,14 +100,12 @@ public:
 	void on_clicked(int time_in_seconds);
 	void OnProgress(MyProgress* progress, double fraction);
 	void OnWorkDone(MyProgress* progress, Gtk::Widget* row, int result);
-	void OnProgressText(double fraction);
-	void OnWorkDoneText(int result);
+	void CleanUpProgress(MyProgress* progress, Gtk::Widget* row);
 
 protected:
 	std::vector<MyThumb> thumbs;
 	Gtk::Grid m_grid;
 	Gtk::ListBox m_list;
-	MyProgress m_Progress;
 
 	void notify();
 	void DoUiWork();
@@ -131,6 +126,7 @@ void MyWindow::AddButton(int row, int column, std::string const& label, int time
 	m_grid.attach(thumbs.back(), row, column);
 }
 
+
 MyWindow::MyWindow()
 {
 	set_title("Basic application");
@@ -139,7 +135,7 @@ MyWindow::MyWindow()
 	AddButton(0, 0, "Task 3 seconds", 3);
 	AddButton(0, 1, "Task 5 seconds", 5);
 	AddButton(0, 2, "Task 10 seconds", 10);
-
+	m_list.set_selection_mode(Gtk::SelectionMode::NONE);
 	m_grid.attach(m_list, 7, 0, 1, 6);
 	
 	set_child(m_grid);
@@ -165,49 +161,46 @@ void MyWindow::OnProgress(MyProgress* progress, double fraction)
 
 void MyWindow::OnWorkDone(MyProgress* progress, Gtk::Widget* row, int result)
 {
-	progress->set_fraction(1.0);
+	CleanUpProgress(progress, row);
+}
+
+void MyWindow::CleanUpProgress(MyProgress* progress, Gtk::Widget* row)
+{
 	m_list.remove(*row);
 	delete progress;
 }
 
-void MyWindow::OnProgressText(double fraction)
-{
-	std::cout << fraction << std::endl;
-}
-
-void MyWindow::OnWorkDoneText(int result)
-{
-	std::cout << result << std::endl;
-}
-
 void MyWindow::on_clicked(int time_in_seconds)
 {
-	auto task = BackgroundThread::Task<int>::CreateTask();
-
 	std::string text =std::to_string(time_in_seconds) + " seconds";
-	
+
+	auto token = std::make_shared<Token>();
 	MyProgress* progress = new MyProgress();
 
 	progress->set_label(text);
 	m_list.append(progress->get_widget());
 	auto row = m_list.get_last_child();
 
-	auto fwork = std::bind(&DelayedWork, time_in_seconds, std::placeholders::_1, std::placeholders::_2);
-	auto fprogress = std::bind(&MyWindow::OnProgress, this, progress, std::placeholders::_1);
-	auto fdone = std::bind(&MyWindow::OnWorkDone, this, progress, row, std::placeholders::_1);
-	task->set_Work(fwork);
-	task->set_Progress(fprogress);
-	task->set_Done(fdone);
-
-	m_Threads.AddTask(
-		task
+	progress->get_AbortButtonClicked().connect(
+		[=]
+		{
+			token->Abort();
+			CleanUpProgress(progress, row);
+		}
 	);
+
+	auto task = BackgroundThread::CreateTask<int>(
+		std::bind(&DelayedWork, time_in_seconds, std::placeholders::_1, std::placeholders::_2),
+		std::bind(&MyWindow::OnProgress, this, progress, std::placeholders::_1),
+		std::bind(&MyWindow::OnWorkDone, this, progress, row, std::placeholders::_1),
+		token
+		);
+	m_Threads.Run(task);
 }
 
 
 int main(int argc, char* argv[])
 {
 	auto app = Gtk::Application::create("org.gtkmm.examples.base");
-
 	return app->make_window_and_run<MyWindow>(argc, argv);
 }
