@@ -11,16 +11,22 @@ target_include_directories(BackgroundThread PUBLIC
 	$<INSTALL_INTERFACE:include>)
 target_link_libraries(BackgroundThread)
 
+
+set_target_properties(BackgroundThread PROPERTIES PUBLIC_HEADER
+"include/BackgroundThread/BaseTask.hpp;include/BackgroundThread/Task.hpp;include/BackgroundThread/Thread.hpp;include/BackgroundThread/Token.hpp;include/BackgroundThread/types.hpp")
+
 add_library(SWTHREADING::BackgroundThread ALIAS BackgroundThread)
 
 install(TARGETS BackgroundThread EXPORT BackgroundThreadTargets
-		LIBRARY DESTINATION lib,
-		ARCHIVE DESTINATION lib,
-		RUNTIME DESTINATION lib,
-		INCLUDES DESTINATION include
+	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+	RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+	INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+	PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/BackgroundThread
 )
+
 install(EXPORT BackgroundThreadTargets
-		DESTINATION lib/cmake/BackgroundThread
-		FILE BackgroundThreadTargets.cmake
-		NAMESPACE SWTHREADING
+	DESTINATION lib/cmake/BackgroundThread
+	FILE BackgroundThreadTargets.cmake
+	NAMESPACE SWTHREADING
 )
