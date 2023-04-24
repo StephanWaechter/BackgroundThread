@@ -1,3 +1,7 @@
+# Visual Studio Code
+build/
+.vscode/
+
 
 # Visual Studio
 .vs/

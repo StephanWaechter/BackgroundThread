@@ -9,14 +9,15 @@ namespace BackgroundThread
 	public:
 		Token() : m_Aborted{ false } {};
 
-		bool is_Aborted()
+		bool is_Aborted() const
 		{
 			std::lock_guard<std::mutex> lock(m_mutex);
 			return m_Aborted;
 		};
 
-		void ThrowIfAborted()
+		void ThrowIfAborted() const
 		{
+			std::lock_guard<std::mutex> lock(m_mutex);
 			if(m_Aborted)
 			{
 				throw AbortedException("Thread was Aborted");
@@ -30,8 +31,7 @@ namespace BackgroundThread
 		};
 
 	private:
-		std::mutex m_mutex;
+		mutable std::mutex m_mutex;
 		bool m_Aborted;
-
 	};
 }

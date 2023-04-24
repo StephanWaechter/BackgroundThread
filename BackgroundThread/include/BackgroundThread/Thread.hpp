@@ -2,7 +2,8 @@
 #include <thread>
 #include <mutex>
 #include <queue>
-#include "types.hpp"
+#include <deque>
+#include "BaseTask.hpp"
 
 namespace BackgroundThread
 {
@@ -10,9 +11,9 @@ namespace BackgroundThread
 	{
 
 	public:
-		void Start(std::function<void(void)> notifier);
-		void Stop();
-		void Run(t_tasklet task);
+		Thread(std::function<void(void)> notifier, u_int32_t number_of_threads = std::thread::hardware_concurrency() - 1);
+		void Join();
+		void Run(std::shared_ptr<BaseTask> task);
 
 		void DoUiWork();
 		void ForwardUiWork(t_task& task);
@@ -25,7 +26,7 @@ namespace BackgroundThread
 		
 		std::condition_variable m_cond_var;
 		std::mutex m_mutex;
-		std::queue<t_tasklet> m_queue;
+		std::deque<std::shared_ptr<BaseTask>> m_queue;
 		
 		std::function<void(void)> m_notifier;
 		std::mutex m_ui_mutex;

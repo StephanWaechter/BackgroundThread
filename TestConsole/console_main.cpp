@@ -8,25 +8,25 @@
 
 using namespace BackgroundThread;
 
-Thread bthread;
+std::unique_ptr<Thread> bthread;
 void notify()
 {
 	std::this_thread::sleep_for(std::chrono::seconds(1));
-	bthread.DoUiWork();
+	bthread->DoUiWork();
 }
 
-int work(std::function<void(double)> progress, Token const * const token)
+int work(int input,std::function<void(double)> progress, Token const * const token)
 {
 	std::cout << "Work: " << std::this_thread::get_id() << std::endl;
-	for (int k = 0; k < 10; k++)
+	for (int k = 0; k < 20; k++)
 	{
-		std::this_thread::sleep_for(std::chrono::seconds(1));
-		std::cout << "Work: " << k << " " << std::this_thread::get_id() << std::endl;
-		progress( k / 10.0 );
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		token->ThrowIfAborted();
+		//std::cout << "Work: " << k << " " << std::this_thread::get_id() << std::endl;
 	}
 	
-	std::cout << "Done" << std::endl;
-	return 5;
+	std::cout << "Done"  << std::endl;
+	return input;
 }
 
 void progress(double progres)
@@ -36,19 +36,60 @@ void progress(double progres)
 
 void done(std::shared_future<int> result)
 {
+	try
+	{
 		std::cout << "Result: " << result.get() << std::endl;
+	}
+	catch(const AbortedException)
+	{
+		std::cout << "Thread was aborted" << std::endl;
+	}
+}
+
+void done2(std::shared_future<int> result)
+{
+	try
+	{
+		std::cout << "Result2: " << result.get() << std::endl;
+	}
+	catch(const AbortedException)
+	{
+		std::cout << "Thread2 was aborted" << std::endl;
+	}
 }
 
 int main()
 {
-	auto token = std::shared_ptr<Token>();
-	auto task = CreateTask<int>(work, progress, done, token);
+	auto token2 = std::make_shared<Token>();
+	auto token = std::make_shared<Token>();
+	bthread = std::make_unique<Thread>(notify, 1);
 
-	bthread.Start(notify);
-	bthread.Run(task);
+
+	for(int k = 0; k < 1; k++)
+	{
+		auto task = CreateTask<int>(
+			[=] (std::function<void(double)> progress, Token const * const token) -> int
+			{
+				return work(k, progress, token);
+			},
+			progress,
+			done,
+			token);
+		bthread->Run(task);
+	}
+
+	auto task = CreateTask<int>(
+		[=] (std::function<void(double)> progress, Token const * const token) -> int
+		{
+			return work(-1, progress, token);
+		},
+		progress,
+		done2,
+		token2);
+	token2->Abort();
+	bthread->Run(task);
+	
 
 	std::string line;
-	std::getline(std::cin, line);
-	bthread.Stop();
 	return 0;
 }
