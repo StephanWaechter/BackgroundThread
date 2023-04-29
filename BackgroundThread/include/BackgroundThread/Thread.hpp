@@ -3,6 +3,7 @@
 #include <mutex>
 #include <queue>
 #include <deque>
+#include <cstdint>
 #include "BaseTask.hpp"
 
 namespace BackgroundThread
@@ -11,7 +12,7 @@ namespace BackgroundThread
 	{
 
 	public:
-		Thread(std::function<void(void)> notifier, u_int32_t number_of_threads = std::thread::hardware_concurrency() - 1);
+		Thread(std::function<void(void)> notifier, uint32_t number_of_threads = std::thread::hardware_concurrency() - 1);
 		void Join();
 		void Run(std::shared_ptr<BaseTask> task);
 

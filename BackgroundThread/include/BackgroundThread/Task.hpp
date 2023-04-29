@@ -21,7 +21,12 @@ namespace BackgroundThread
 				m_work{work},
 				m_progress{progress},
 				m_done{done}
-				{};
+				{
+				int a = 0;
+			};
+
+			// Excplicitly delete copy constructor
+			Task(Task const& copy) = delete;
 
 			void Run(t_forward_task forward) override
 			{
@@ -36,11 +41,18 @@ namespace BackgroundThread
 				};
 				auto future = std::async(std::launch::deferred, m_work, update_progress, get_Token()).share();
 				future.wait(); // do the work
+
+				/*
+				* store copy of m_done on stack because task might
+				* go out of scope before ui work can be completed
+				*/ 
+				auto onDone = m_done; 
 				forward(
-					[this, future]()
+					[=]()
 					{ 
-						m_done(future);
-					});
+						onDone(future);
+					}
+				);
 			}
 
 			void AbortImmediately() override
@@ -62,12 +74,12 @@ namespace BackgroundThread
 	};
 
 	template<class TResult> std::shared_ptr<Task<TResult>> CreateTask(
-		std::function<TResult(std::function<void(double)>, Token* token)> work,
-		std::function<void(double)> progress,
-		std::function<void(std::shared_future<TResult>)> done,
+		std::function<TResult(f_progress notifyProgress, Token* token)> work,
+		f_progress onProgress,
+		std::function<void(std::shared_future<TResult>)> onDone,
 		std::shared_ptr<Token> token
 	)
 	{
-		return std::make_shared<Task<TResult>>(work, progress, done, token);
+		return std::make_shared<Task<TResult>>(work, onProgress, onDone, token);
 	};
 }

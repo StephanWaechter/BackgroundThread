@@ -2,7 +2,7 @@
 #include <BackgroundThread/Thread.hpp>
 #include <BackgroundThread/Token.hpp>
 
-BackgroundThread::Thread::Thread(std::function<void(void)> notifier, u_int32_t num_threads)
+BackgroundThread::Thread::Thread(std::function<void(void)> notifier, uint32_t num_threads)
 {
 	m_continue = true;
 	m_notifier = notifier;
@@ -52,13 +52,12 @@ void BackgroundThread::Thread::DoUiWork()
 			m_ui_work.pop();
 		}
 	}
-
 }
 void BackgroundThread::Thread::ForwardUiWork(t_task& task)
 {
 	{
 		std::lock_guard<std::mutex> lock(m_ui_mutex);
-		m_ui_work.push(std::move(task));
+		m_ui_work.push(task);
 	} // Do not lock notifier -> dead lock in Thread::DoUiWork
 	m_notifier();
 }

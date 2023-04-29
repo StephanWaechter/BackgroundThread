@@ -126,7 +126,7 @@ protected:
 	void notify();
 	void DoUiWork();
 	Glib::Dispatcher m_dispatcher;
-	BackgroundThread::Thread m_Threads;
+	std::unique_ptr<BackgroundThread::Thread> m_Threads;
 	std::list<MyProgress*> m_ProgressVector;
 
 private:
@@ -137,7 +137,9 @@ void MyWindow::AddButton(int row, int column, std::string const& label, int time
 {
 	thumbs.push_back(MyThumb(label));
 	thumbs.back().signal_clicked().connect(
-		sigc::bind(sigc::mem_fun(*this, &MyWindow::on_clicked), time)
+		[=] {
+			on_clicked(time);
+		}
 	);
 	m_grid.attach(thumbs.back(), row, column);
 }
@@ -159,7 +161,13 @@ MyWindow::MyWindow()
 
 	set_child(m_grid);
 
-	m_Threads.Start(std::bind(&MyWindow::notify,this));
+	m_Threads = std::make_unique<BackgroundThread::Thread>(
+		[=]
+		{ 
+			notify(); 
+		}, 
+		4
+	);
 	m_dispatcher.connect(sigc::mem_fun(*this, &MyWindow::DoUiWork));
 }
 
@@ -170,7 +178,7 @@ void MyWindow::notify()
 
 void MyWindow::DoUiWork()
 {
-	m_Threads.DoUiWork();
+	m_Threads->DoUiWork();
 }
 
 void MyWindow::OnProgress(MyProgress* progress, double fraction)
@@ -225,12 +233,22 @@ void MyWindow::on_clicked(int time_in_seconds)
 	);
 
 	auto task = BackgroundThread::CreateTask<int>(
-		std::bind(&DelayedWork, time_in_seconds, std::placeholders::_1, std::placeholders::_2),
-		std::bind(&MyWindow::OnProgress, this, progress, std::placeholders::_1),
-		std::bind(&MyWindow::OnWorkDone, this, progress, row, std::placeholders::_1),
+		[=](BackgroundThread::f_progress progress, Token* token) -> int
+		{
+			return DelayedWork(time_in_seconds, progress, token);
+		},
+		[=](double vprogress)
+		{
+			OnProgress(progress, vprogress);
+		},
+		[=](std::shared_future<int> result)
+		{
+			OnWorkDone(progress, row, result);
+		},
 		token
-		);
-	m_Threads.Run(task);
+	);
+
+	m_Threads->Run(task);
 }
 
 

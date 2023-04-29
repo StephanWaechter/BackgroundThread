@@ -68,7 +68,7 @@ int main()
 	for(int k = 0; k < 1; k++)
 	{
 		auto task = CreateTask<int>(
-			[=] (std::function<void(double)> progress, Token const * const token) -> int
+			[=] (std::function<void(double)> progress, Token * token) -> int
 			{
 				return work(k, progress, token);
 			},
@@ -79,7 +79,7 @@ int main()
 	}
 
 	auto task = CreateTask<int>(
-		[=] (std::function<void(double)> progress, Token const * const token) -> int
+		[=] (std::function<void(double)> progress, Token * token) -> int
 		{
 			return work(-1, progress, token);
 		},
