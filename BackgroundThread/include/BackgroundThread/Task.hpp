@@ -30,41 +30,48 @@ namespace BackgroundThread
 
 			void Run(t_forward_task forward) override
 			{
-				if(get_Token()->is_Aborted())
+				if (get_Token()->is_Aborted())
 				{
-					AbortImmediately();
 					return;
 				}
-				auto update_progress = [=](double progress)
-				{
-					forward([=]() { m_progress(progress); });
-				};
-				auto future = std::async(std::launch::deferred, m_work, update_progress, get_Token()).share();
-				future.wait(); // do the work
 
+				std::promise<TResult> promis;
+				bool aborted = false;
+				try
+				{
+					auto update_progress = [=](double progress)
+					{
+						forward([=]() { m_progress(progress); });
+					};
+					TResult result = m_work(update_progress, get_Token());
+					promis.set_value(result);
+				}
+				catch (AbortedException)
+				{
+					aborted = true;
+				}
+				catch (...)
+				{
+					promis.set_exception(
+						std::current_exception()
+					);
+				}
+
+				// don't call onDone if we where aborted
+				if (aborted) return;
+
+				auto future = promis.get_future().share();
 				/*
 				* store copy of m_done on stack because task might
 				* go out of scope before ui work can be completed
-				*/ 
-				auto onDone = m_done; 
+				*/
+				auto onDone = m_done;
 				forward(
 					[=]()
-					{ 
+					{
 						onDone(future);
 					}
 				);
-			}
-
-			void AbortImmediately() override
-			{
-				std::promise<TResult> p;
-				p.set_exception(
-					std::make_exception_ptr(
-						AbortedException("Task aborted before it was started")
-					)
-				);
-				auto future = p.get_future();
-				m_done(std::move(future));
 			}
 
 		private:

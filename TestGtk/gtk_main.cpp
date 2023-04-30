@@ -150,14 +150,15 @@ MyWindow::MyWindow()
 	set_title("Basic application");
 	set_default_size(640, 480);
 	
-	AddButton(0, 0, "Task 3 seconds", 3);
-	AddButton(0, 1, "Task 5 seconds", 5);
-	AddButton(0, 2, "Task 10 seconds", 10);
+	AddButton(0, 0, "Task 1 seconds", 1);
+	AddButton(0, 1, "Task 3 seconds", 3);
+	AddButton(0, 2, "Task 5 seconds", 5);
+	AddButton(0, 3, "Task 10 seconds", 10);
 
 	m_list.set_selection_mode(Gtk::SelectionMode::NONE);
-	m_grid.attach(m_list, 1, 0, 1, 3);
+	m_grid.attach(m_list, 1, 0, 1, 4);
 	
-	m_grid.attach(m_statusbar, 0, 3, 2, 1);
+	m_grid.attach(m_statusbar, 0, 4, 2, 1);
 
 	set_child(m_grid);
 
@@ -195,10 +196,6 @@ void MyWindow::OnWorkDone(MyProgress* progress, Gtk::Widget* row, std::shared_fu
 		std::string message = "Task with " + str + "s endend";
 		m_statusbar.push(message, 0);
 		CleanUpProgress(progress, row);
-	}
-	catch (BackgroundThread::AbortedException)
-	{
-
 	}
 	catch (...)
 	{
