@@ -22,7 +22,7 @@ namespace BackgroundThread
 			// Excplicitly delete copy constructor
 			Task(Task const& copy) = delete;
 
-			void Run(t_forward_task forward) override
+			t_task Run() override
 			{
 				std::promise<TResult> promis;
 				bool aborted = false;
@@ -43,7 +43,7 @@ namespace BackgroundThread
 				}
 
 				// don't call onDone if we where aborted
-				if (aborted) return;
+				if (aborted) return nullptr;
 
 				auto future = promis.get_future().share();
 				/*
@@ -51,7 +51,7 @@ namespace BackgroundThread
 				* go out of scope before ui work can be completed
 				*/
 				auto onDone = m_done;
-				forward([=] { onDone(future); });
+				return [=] { onDone(future); };
 			}
 
 		private:

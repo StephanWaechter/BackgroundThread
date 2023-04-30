@@ -232,13 +232,15 @@ void MyWindow::on_clicked(int time_in_seconds)
 	auto notifyProgress = m_Threads->CreateNotifier<double>(
 		[=](double vprogress)
 		{
-			OnProgress(progress, vprogress);
+			if (!token->is_Aborted())
+				OnProgress(progress, vprogress);
 		}
 	);
 
 	auto task = BackgroundThread::CreateTask<int>(
 		[=]() -> int
 		{
+			token->ThrowIfAborted();
 			return DelayedWork(time_in_seconds, notifyProgress, token);
 		},
 		[=](std::shared_future<int> result)

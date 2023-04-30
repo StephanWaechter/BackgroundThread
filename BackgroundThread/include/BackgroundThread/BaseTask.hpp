@@ -7,6 +7,6 @@ namespace BackgroundThread
 	{
 		public:
 			BaseTask() {};
-			virtual void Run(t_forward_task forward) = 0;
+			virtual t_task Run() = 0;
 	};
 }

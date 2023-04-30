@@ -81,10 +81,10 @@ void BackgroundThread::Thread::Process()
 			m_queue.pop_front();
 		}
 		std::cout << "BackgroundThread::Start work on thread: " << std::this_thread::get_id() << " m_queue.size() = " << m_queue.size() << std::endl;
-		t_forward_task forward = [=] (t_task task) -> void
+		auto task = currentTask->Run();
+		if(task != nullptr)
 		{
 			ForwardUiWork(task);
-		};
-		currentTask->Run(forward);
+		}
 	}
 }
