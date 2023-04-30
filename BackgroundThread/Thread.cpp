@@ -53,7 +53,8 @@ void BackgroundThread::Thread::DoUiWork()
 		}
 	}
 }
-void BackgroundThread::Thread::ForwardUiWork(t_task& task)
+
+void BackgroundThread::Thread::ForwardUiWork(t_task task)
 {
 	{
 		std::lock_guard<std::mutex> lock(m_ui_mutex);

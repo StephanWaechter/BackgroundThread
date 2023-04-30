@@ -9,7 +9,7 @@ using namespace Glib;
 using namespace Gtk;
 using namespace BackgroundThread;
 
-int DelayedWork(int time_in_seconds, std::function<void(double)> progress, BackgroundThread::Token * token)
+int DelayedWork(int time_in_seconds, std::function<void(double)> progress, std::shared_ptr<BackgroundThread::Token> token)
 {
 	std::cout << "Running " << time_in_seconds << " on thread: " << std::this_thread::get_id() << std::endl;
 	int N = time_in_seconds * 10;
@@ -229,20 +229,22 @@ void MyWindow::on_clicked(int time_in_seconds)
 		}
 	);
 
-	auto task = BackgroundThread::CreateTask<int>(
-		[=](BackgroundThread::f_progress progress, Token* token) -> int
-		{
-			return DelayedWork(time_in_seconds, progress, token);
-		},
+	auto notifyProgress = m_Threads->CreateNotifier<double>(
 		[=](double vprogress)
 		{
 			OnProgress(progress, vprogress);
+		}
+	);
+
+	auto task = BackgroundThread::CreateTask<int>(
+		[=]() -> int
+		{
+			return DelayedWork(time_in_seconds, notifyProgress, token);
 		},
 		[=](std::shared_future<int> result)
 		{
 			OnWorkDone(progress, row, result);
-		},
-		token
+		}
 	);
 
 	m_Threads->Run(task);

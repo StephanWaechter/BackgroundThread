@@ -17,7 +17,19 @@ namespace BackgroundThread
 		void Run(std::shared_ptr<BaseTask> task);
 
 		void DoUiWork();
-		void ForwardUiWork(t_task& task);
+
+
+		void ForwardUiWork(t_task task);
+
+		template<class TType>
+		std::function<void(TType)> CreateNotifier(std::function<void(TType)> onEvent)
+		{
+			return [=](TType argument)
+			{
+				ForwardUiWork([=]() { onEvent(argument); });
+			};
+		};
+
 		~Thread();
 
 	private:
