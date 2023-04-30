@@ -34,6 +34,10 @@ public:
 	{
 		return m_Button.signal_clicked();
 	}
+	auto Abort()
+	{
+		m_Token->Abort();
+	}
 
 private:
 	Gtk::Grid m_Grid;
@@ -112,6 +116,8 @@ public:
 	void OnWorkDone(MyProgress* progress, Gtk::Widget* row, std::shared_future<int> result);
 	void CleanUpProgress(MyProgress* progress, Gtk::Widget* row);
 
+	bool on_close_request() override;
+
 	void Test(void){
 		std::thread thread(worker);
 		thread.detach();
@@ -142,6 +148,16 @@ void MyWindow::AddButton(int row, int column, std::string const& label, int time
 		}
 	);
 	m_grid.attach(thumbs.back(), row, column);
+}
+
+bool MyWindow::on_close_request()
+{
+	for (auto const& progress : m_ProgressVector)
+	{
+		progress->Abort();
+	}
+
+	return false;
 }
 
 
@@ -207,7 +223,7 @@ void MyWindow::OnWorkDone(MyProgress* progress, Gtk::Widget* row, std::shared_fu
 void MyWindow::CleanUpProgress(MyProgress* progress, Gtk::Widget* row)
 {
 	m_list.remove(*row);
-	delete progress;
+	m_ProgressVector.remove(progress);
 }
 
 void MyWindow::on_clicked(int time_in_seconds)
@@ -215,9 +231,11 @@ void MyWindow::on_clicked(int time_in_seconds)
 	std::string text =std::to_string(time_in_seconds) + " seconds";
 
 	auto token = std::make_shared<Token>();
-	MyProgress* progress = new MyProgress();
+	m_ProgressVector.push_back(new MyProgress());
+	MyProgress* progress = m_ProgressVector.back();
 
 	progress->set_label(text);
+	progress->set_Token(token);
 	m_list.append(progress->get_widget());
 	auto row = m_list.get_last_child();
 
