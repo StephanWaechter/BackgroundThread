@@ -17,9 +17,7 @@ namespace BackgroundThread
 				) :
 				m_work{work},
 				m_done{done}
-				{
-				int a = 0;
-			};
+				{};
 
 			// Excplicitly delete copy constructor
 			Task(Task const& copy) = delete;
