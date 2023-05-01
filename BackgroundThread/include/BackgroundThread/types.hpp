@@ -11,5 +11,6 @@ namespace BackgroundThread
 	};
 
 	using t_task = std::function<void(void)>;
-	using t_forward_task = std::function<void(t_task)>;
+	template<class T> using action_t = std::function<void(T)>;
+	using task_t = std::function<action_t<void>(void)>;
 }

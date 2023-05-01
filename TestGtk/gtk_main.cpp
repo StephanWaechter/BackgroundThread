@@ -4,6 +4,7 @@
 #include <BackgroundThread/Thread.hpp>
 #include <BackgroundThread/Task.hpp>
 #include <future>
+#include <BackgroundThread/BaseTask.hpp>
 
 using namespace Glib;
 using namespace Gtk;

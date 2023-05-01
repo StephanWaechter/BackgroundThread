@@ -2,27 +2,32 @@
 #include <iostream>
 #include <string>
 #include <sstream>
+#include <queue>
 
-void printResult(std::future<std::string> future)
-{
-	std::cout << future.get() << std::endl;
-}
+
+class Task {
+	std::o
+};
 
 int main()
 {
-	auto future = std::async(
-		std::launch::deferred, 
-		[]() -> std::string 
-		{ 
-			return std::string{ "Hello World!!!" }; 
-		}
-	);
+	std::queue<std::function<void(void)>> task_queue;
 
-	auto finsih = [onDone = printResult, f = std::move(future)] () mutable
+
+	for(int k = 0; k< 20; k++)
 	{
-		onDone(std::move(f));
-	};
+		auto task = std::packaged_task(
+			[=]() -> int
+			{
+				std::this_thread::sleep_for(std::chrono::microseconds(500));
+				return 10;
+			});
+		task_queue.push(task);
+		auto result = task.get_future();
+	}
+	task();
 
+	
 	finsih();
 
 }

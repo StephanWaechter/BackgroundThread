@@ -31,7 +31,7 @@ BackgroundThread::Thread::~Thread()
 		Join();
 }
 
-void BackgroundThread::Thread::Run(std::shared_ptr<BaseTask> task)
+void BackgroundThread::Thread::Run(task_t task)
 {
 	{
 		std::lock_guard<std::mutex> lock(m_mutex);
@@ -68,7 +68,7 @@ void BackgroundThread::Thread::Process()
 	std::cout << "BackgroundThread::Process: Start Thread " << std::this_thread::get_id() << std::endl;
 	while (true)
 	{
-		std::shared_ptr<BaseTask> currentTask;
+		task_t currentTask;
 		{
 			std::unique_lock<std::mutex> lock(m_mutex);
 			m_cond_var.wait(lock, [&] { return !m_continue || !m_queue.empty(); });
@@ -81,10 +81,10 @@ void BackgroundThread::Thread::Process()
 			m_queue.pop_front();
 		}
 		std::cout << "BackgroundThread::Start work on thread: " << std::this_thread::get_id() << " m_queue.size() = " << m_queue.size() << std::endl;
-		auto task = currentTask->Run();
-		if(task != nullptr)
+		auto onDone = currentTask();
+		if(onDone != nullptr)
 		{
-			ForwardUiWork(task);
+			ForwardUiWork(onDone);
 		}
 	}
 }
