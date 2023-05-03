@@ -18,7 +18,7 @@ namespace BackgroundThread
 
 		void DoUiWork();
 
-		void ForwardUiWork(t_task task);
+		void ForwardUiWork(action_t task);
 
 		template<class TType>
 		std::function<void(TType)> CreateNotifier(std::function<void(TType)> onEvent)
@@ -40,9 +40,9 @@ namespace BackgroundThread
 		std::mutex m_mutex;
 		std::deque<task_t> m_queue;
 		
-		action_t<void> m_notifier;
+		action_t m_notifier;
 		std::mutex m_ui_mutex;
-		std::queue<action_t<void>> m_ui_work;
+		std::queue<action_t> m_ui_work;
 
 		std::vector<std::thread> m_thread;
 	};
