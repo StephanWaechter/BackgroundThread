@@ -8,7 +8,7 @@ namespace BackgroundThread
 		std::function<TResult(void)> work
 	)
 	{
-		return [=]() -> action_t<void>
+		return [=]() -> action_t
 		{
 			std::promise<TResult> promis;
 			bool aborted = false;
@@ -28,7 +28,7 @@ namespace BackgroundThread
 				);
 			}
 
-			return action_t<void>{nullptr};
+			return action_t{nullptr};
 		};
 	}
 
@@ -37,14 +37,22 @@ namespace BackgroundThread
 		std::function<void(std::shared_future<TResult>)> done
 	)
 	{
-		return [=]() -> action_t<void>
+		return [=]() -> action_t
 		{
 			std::promise<TResult> promis;
 			bool aborted = false;
 			try
 			{
-				TResult result = work();
-				promis.set_value(result);
+				if constexpr (std::is_void<TResult>())
+				{
+					work();
+					promis.set_value();
+				}
+				else
+				{
+					TResult result = work();
+					promis.set_value(result);
+				}
 			}
 			catch (AbortedException)
 			{
@@ -58,7 +66,7 @@ namespace BackgroundThread
 			}
 
 			// don't call onDone if we where aborted
-			if (aborted) return action_t<void>{nullptr};
+			if (aborted) return action_t{nullptr};
 
 			auto future = promis.get_future().share();
 			return [=] { done(future); };

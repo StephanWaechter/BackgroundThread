@@ -15,14 +15,12 @@ void notify()
 	bthread->DoUiWork();
 }
 
-int work(int input,std::function<void(double)> progress, Token const * const token)
+int work(int input,std::function<void(double)> progress)
 {
 	std::cout << "Work: " << std::this_thread::get_id() << std::endl;
 	for (int k = 0; k < 20; k++)
 	{
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
-		token->ThrowIfAborted();
-		//std::cout << "Work: " << k << " " << std::this_thread::get_id() << std::endl;
 	}
 	
 	std::cout << "Done"  << std::endl;
@@ -46,49 +44,40 @@ void done(std::shared_future<int> result)
 	}
 }
 
-void done2(std::shared_future<int> result)
-{
-	try
-	{
-		std::cout << "Result2: " << result.get() << std::endl;
-	}
-	catch(const AbortedException)
-	{
-		std::cout << "Thread2 was aborted" << std::endl;
-	}
-}
-
 int main()
 {
-	auto token2 = std::make_shared<Token>();
-	auto token = std::make_shared<Token>();
 	bthread = std::make_unique<Thread>(notify, 1);
-
+    auto nprogress = bthread->CreateNotifier<double>(progress);
 
 	for(int k = 0; k < 1; k++)
 	{
 		auto task = CreateTask<int>(
-			[=] (std::function<void(double)> progress, Token * token) -> int
+			[=] () -> int
 			{
-				return work(k, progress, token);
+				return work(k, nprogress);
 			},
-			progress,
-			done,
-			token);
+			done
+			);
 		bthread->Run(task);
 	}
 
-	auto task = CreateTask<int>(
-		[=] (std::function<void(double)> progress, Token * token) -> int
-		{
-			return work(-1, progress, token);
-		},
-		progress,
-		done2,
-		token2);
-	token2->Abort();
-	bthread->Run(task);
-	
+
+	for(int k = 0; k < 1; k++)
+	{
+		auto task = CreateTask<void>(
+			[=] () -> void
+			{
+				work(k, nprogress);
+			},
+			[=] (std::shared_future<void>)
+			{
+				std::cout << "done" << std::endl;
+			}
+
+			);
+		bthread->Run(task);
+	}
+
 
 	std::string line;
 	return 0;
