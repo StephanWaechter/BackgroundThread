@@ -13,7 +13,14 @@ namespace BackgroundThread
 {
 	namespace GtkDemo
 	{
-		int DelayedWork(int time_in_seconds, std::function<void(double)> progress, std::shared_ptr<BackgroundThread::Token> token)
+		struct Work
+		{
+			Work(std::unique_ptr<Progress> pprogress, std::unique_ptr<Token> ptoken) : pProgress{ std::move(pprogress) }, pToken{ std::move(ptoken) } {};
+			std::unique_ptr<Progress> pProgress;
+			std::unique_ptr<Token> pToken;
+		};
+
+		int DelayedWork(int time_in_seconds, std::function<void(double)> progress, BackgroundThread::Token & token)
 		{
 			std::cout << "Running " << time_in_seconds << " on thread: " << std::this_thread::get_id() << std::endl;
 			int N = time_in_seconds * 10;
@@ -21,10 +28,11 @@ namespace BackgroundThread
 			{
 				progress(k / double(N));
 				std::this_thread::sleep_for(std::chrono::milliseconds(100));
-				if (token->is_Aborted())
+				if (token.is_Aborted())
 					std::cout << "Thread " << std::this_thread::get_id() << " was aborted!!!" << std::endl;
-				token->ThrowIfAborted();
+				token.ThrowIfAborted();
 			}
+			std::cout << "Thread " << std::this_thread::get_id() << " finished." << std::endl;
 			return (time_in_seconds);
 		}
 
@@ -38,41 +46,49 @@ namespace BackgroundThread
 
 			Glib::Dispatcher m_dispatcher;
 			std::unique_ptr<BackgroundThread::Thread> m_Threads;
-			std::list<std::shared_ptr<Token>> m_ActiveTokens;
+			std::list<std::shared_ptr<Work>> m_Worker;
 
 			void StartWork(int time_in_seconds)
 			{
 				std::string text = std::to_string(time_in_seconds) + " seconds";
 
-				auto progress = std::make_shared<Progress>(text);
-				m_list.append(*progress);
+				m_Worker.push_back(
+					std::make_shared<Work>(
+						std::make_unique<Progress>(text),
+						std::make_unique<Token>()
+					)
+				);
+				auto work = m_Worker.back();
+				auto& pProgress = work->pProgress;
+				auto& pToken = work->pToken;
 
+				m_list.append(*pProgress);
 				auto row = m_list.get_last_child();
-				auto token = std::make_shared<Token>();
-				m_ActiveTokens.push_back(token);
 
-				progress->get_AbortButtonClicked().connect(
-					[=]() -> void
+				pProgress->get_AbortButtonClicked().connect(
+					[=, pToken = pToken.get() ]() -> void
 					{
-						token->Abort();
+						pToken->Abort();
 						m_list.remove(*row);
-						m_ActiveTokens.remove(token);
+						m_Worker.remove(work);
 					}
 				);
 
 				auto notifyProgress = m_Threads->CreateNotifier<double>(
-					[=](double vprogress) -> void
+					[=, ptoken = pToken.get(), pprogress = pProgress.get()](double vprogress) -> void
 					{
-						if (!token->is_Aborted())
-							progress->set_fraction(vprogress);
+						if (!ptoken->is_Aborted())
+						{
+							pprogress->set_fraction(vprogress);
+						}
 					}
 				);
 
 				auto task = BackgroundThread::CreateTask<int>(
-					[=]() -> int
+					[=, ptoken = work->pToken.get()]() -> int
 					{
-						token->ThrowIfAborted();
-						return DelayedWork(time_in_seconds, notifyProgress, token);
+						ptoken->ThrowIfAborted();
+						return DelayedWork(time_in_seconds, notifyProgress, *ptoken);
 					},
 					[=](std::shared_future<int> result)
 					{
@@ -91,7 +107,7 @@ namespace BackgroundThread
 							m_statusbar.push("Unknown Exception", 0);
 						}
 						m_list.remove(*row);
-						m_ActiveTokens.remove(token);
+						m_Worker.remove(work);
 					}
 				);
 
@@ -144,9 +160,9 @@ namespace BackgroundThread
 
 			bool on_close_request() override
 			{
-				for (auto const& token : m_ActiveTokens)
+				for (auto const& worker : m_Worker)
 				{
-					token->Abort();
+					worker->pToken->Abort();
 				}
 
 				return false;
