@@ -22,6 +22,7 @@ GtkTest::ViewModel::WorkViewModel::WorkViewModel(
 
 	Work = [this, progress]
 	{
+		m_Token.ThrowIfAborted();
 		auto start = system_clock::now();
 		::duration<double> runtime{ 0ms };
 		std::cout << "Running " << m_Duration.count() << " on thread: " << std::this_thread::get_id() << std::endl;
