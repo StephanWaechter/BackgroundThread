@@ -1,9 +1,9 @@
 #pragma once
 #include <gtkmm.h>
 
-namespace BackgroundThread
+namespace GtkTest
 {
-	namespace GtkDemo
+	namespace Views
 	{
 		class Progress : public Gtk::Grid
 		{

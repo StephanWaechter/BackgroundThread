@@ -13,11 +13,14 @@ endif()
 FIND_PACKAGE(PkgConfig REQUIRED)
 FIND_PACKAGE(Threads REQUIRED)
  
-add_executable(TestGtk  "gtk_main.cpp") 
+add_executable(TestGtk  "gtk_main.cpp" 
+    "ViewModels/MainViewModel.cpp"
+    "ViewModels/WorkViewModel.cpp") 
 pkg_check_modules(GTKMM gtkmm-4.0 REQUIRED)
 
 target_include_directories(TestGtk PUBLIC
 	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/>
 	$<INSTALL_INTERFACE:include>
     PRIVATE
     ${GTKMM_INCLUDE_DIRS})
