@@ -40,4 +40,5 @@ void GtkTest::ViewModel::MainViewModel::OnClosing()
 	{
 		worker->Abort();
 	}
+	m_Thread->Join();
 }
