@@ -10,13 +10,21 @@ if(NOT TARGET SWTHREADING::BackgroundThread)
     find_package(BackgroundThread CONFIG)
 endif()
 
+
 FIND_PACKAGE(PkgConfig REQUIRED)
 FIND_PACKAGE(Threads REQUIRED)
+pkg_check_modules(GTKMM gtkmm-4.0)
+
+if(NOT ${GTKMM_FOUND})
+    message(STATUS "gtkmm-4.0 not install dont build GtkDemo")
+    return()
+endif()
+
  
 add_executable(TestGtk  "gtk_main.cpp" 
     "ViewModels/MainViewModel.cpp"
     "ViewModels/WorkViewModel.cpp") 
-pkg_check_modules(GTKMM gtkmm-4.0 REQUIRED)
+
 
 target_include_directories(TestGtk PUBLIC
 	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
