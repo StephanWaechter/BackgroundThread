@@ -3,8 +3,8 @@
 #include <string>
 using namespace std::chrono;
 
-GtkTest::ViewModel::MainViewModel::MainViewModel(BackgroundThread::Thread& thread) :
-	m_Thread{thread}
+GtkTest::ViewModel::MainViewModel::MainViewModel(std::unique_ptr<BackgroundThread::Thread> thread) :
+	m_Thread{std::move(thread)}
 {
 }
 
@@ -16,7 +16,7 @@ void GtkTest::ViewModel::MainViewModel::StartWork(std::chrono::duration<double> 
 			std::make_unique<WorkViewModel>(
 				name,
 				duration,
-				m_Thread
+				*m_Thread
 				)
 		)
 	);
@@ -25,14 +25,19 @@ void GtkTest::ViewModel::MainViewModel::StartWork(std::chrono::duration<double> 
 		[worker = m_Worker.back().get()]() {
 			return worker->Work();
 		},
-		[worker = m_Worker.back().get()](std::shared_future<int> result)
+		[this, &worker = m_Worker.back()](std::shared_future<int> result)
 		{
 			worker->OnDone(result.get());
+			m_Worker.remove(worker);
 		}
 		);
-	m_Thread.Run(task);
+	m_Thread->Run(task);
 }
 
 void GtkTest::ViewModel::MainViewModel::OnClosing()
 {
+	for (auto const& worker : m_Worker)
+	{
+		worker->Abort();
+	}
 }

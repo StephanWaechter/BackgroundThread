@@ -6,27 +6,26 @@
 
 using namespace GtkTest;
 
-std::unique_ptr<BackgroundThread::Thread> BackgroundThreads;
 Glib::Dispatcher Dispatcher;
 std::unique_ptr<ViewModel::MainViewModel> mainViewModel;
 
 int main(int argc, char* argv[])
 {
-	BackgroundThreads = std::make_unique<BackgroundThread::Thread>(
+	auto backgroundThreads = std::make_unique<BackgroundThread::Thread>(
 		[d = &Dispatcher] {
 			d->emit();
 		}, 4
 	);
 
 	Dispatcher.connect(
-		[t = BackgroundThreads.get()]
+		[t = backgroundThreads.get()]
 		{
 			t->DoUiWork();
 		}
 	);
 
 	mainViewModel = std::make_unique<ViewModel::MainViewModel>(
-		*BackgroundThreads
+		std::move(backgroundThreads)
 	);
 
 

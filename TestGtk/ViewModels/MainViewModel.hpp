@@ -1,7 +1,7 @@
 #pragma once
 #include <memory>
 #include <chrono>
-#include <vector>
+#include <list>
 #include <BackgroundThread/Thread.hpp>
 #include "WorkViewModel.hpp"
 
@@ -13,7 +13,7 @@ namespace GtkTest
 		{
 		public:
 			MainViewModel(
-				BackgroundThread::Thread& thread
+				std::unique_ptr<BackgroundThread::Thread> thread
 			);
 
 			void StartWork(std::chrono::duration<double> duration);
@@ -21,8 +21,8 @@ namespace GtkTest
 
 			void OnClosing();
 		private:
-			BackgroundThread::Thread& m_Thread;
-			std::vector<std::unique_ptr<WorkViewModel>> m_Worker;
+			std::unique_ptr<BackgroundThread::Thread> m_Thread;
+			std::list<std::unique_ptr<WorkViewModel>> m_Worker;
 		};
 	}
 }
