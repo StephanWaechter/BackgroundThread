@@ -74,6 +74,6 @@ namespace BackgroundThread
 		{}
 
 		UiWork(UiWork&& other) noexcept : pimpl{ std::move(other.pimpl) } {}
-		UiWork& operator=(UiWork&& other) noexcept { std::swap(pimpl, other.pimpl); };
+		UiWork& operator=(UiWork&& other) noexcept { std::swap(pimpl, other.pimpl); return *this; };
 	};
 }
