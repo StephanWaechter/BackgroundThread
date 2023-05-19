@@ -1,9 +1,9 @@
 #include "MainViewModel.hpp"
-#include <BackgroundThread/Task.hpp>
+#include <Task.hpp>
 #include <string>
 using namespace std::chrono;
 
-GtkTest::ViewModel::MainViewModel::MainViewModel(std::unique_ptr<BackgroundThread::Thread> thread) :
+GtkTest::ViewModel::MainViewModel::MainViewModel(std::unique_ptr<BackgroundThread::ThreadPool> thread) :
 	m_Thread{std::move(thread)}
 {
 }
@@ -21,7 +21,7 @@ void GtkTest::ViewModel::MainViewModel::StartWork(std::chrono::duration<double> 
 		)
 	);
 	OnNewWork(*(m_Worker.back()));
-	auto task = BackgroundThread::CreateTask<int>(
+	auto task = BackgroundThread::Task::Create<int>(
 		[worker = m_Worker.back().get()]() {
 			return worker->Work();
 		},
@@ -31,7 +31,7 @@ void GtkTest::ViewModel::MainViewModel::StartWork(std::chrono::duration<double> 
 			m_Worker.remove(worker);
 		}
 		);
-	m_Thread->Run(task);
+	m_Thread->push(std::move(task));
 }
 
 void GtkTest::ViewModel::MainViewModel::OnClosing()
@@ -40,5 +40,5 @@ void GtkTest::ViewModel::MainViewModel::OnClosing()
 	{
 		worker->Abort();
 	}
-	m_Thread->Join();
+	m_Thread->join();
 }

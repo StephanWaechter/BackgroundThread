@@ -11,16 +11,18 @@ std::unique_ptr<ViewModel::MainViewModel> mainViewModel;
 
 int main(int argc, char* argv[])
 {
-	auto backgroundThreads = std::make_unique<BackgroundThread::Thread>(
-		[d = &Dispatcher] {
-			d->emit();
-		}, 4
+	auto backgroundThreads = std::make_unique<BackgroundThread::ThreadPool>(4);
+
+	backgroundThreads->get_UiWorker().set_Notifer(
+		[] {
+			Dispatcher.emit();
+		}
 	);
 
 	Dispatcher.connect(
 		[t = backgroundThreads.get()]
 		{
-			t->DoUiWork();
+			t->get_UiWorker().doWork();
 		}
 	);
 

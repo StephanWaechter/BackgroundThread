@@ -1,8 +1,8 @@
 #pragma once
 #include <memory>
 #include <chrono>
-#include <BackgroundThread/Token.hpp>
-#include <BackgroundThread/Thread.hpp>
+#include <Token.hpp>
+#include <ThreadPool.hpp>
 namespace GtkTest
 {
 	namespace ViewModel
@@ -13,7 +13,7 @@ namespace GtkTest
 			WorkViewModel(
 				std::string const& name,
 				std::chrono::duration<double> duration,
-				BackgroundThread::Thread& thread
+				BackgroundThread::ThreadPool& thread
 			);
 			void Abort();
 

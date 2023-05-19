@@ -3,8 +3,8 @@
 #include "Progress.hpp"
 
 #include <gtkmm.h>
-#include <BackgroundThread/Thread.hpp>
-#include <BackgroundThread/Task.hpp>
+#include <ThreadPool.hpp>
+#include <Task.hpp>
 #include <functional>
 #include <memory>
 #include <chrono>

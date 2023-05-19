@@ -2,7 +2,7 @@
 #include <memory>
 #include <chrono>
 #include <list>
-#include <BackgroundThread/Thread.hpp>
+#include <ThreadPool.hpp>
 #include "WorkViewModel.hpp"
 
 namespace GtkTest
@@ -13,7 +13,7 @@ namespace GtkTest
 		{
 		public:
 			MainViewModel(
-				std::unique_ptr<BackgroundThread::Thread> thread
+				std::unique_ptr<BackgroundThread::ThreadPool> thread
 			);
 
 			void StartWork(std::chrono::duration<double> duration);
@@ -21,7 +21,7 @@ namespace GtkTest
 
 			void OnClosing();
 		private:
-			std::unique_ptr<BackgroundThread::Thread> m_Thread;
+			std::unique_ptr<BackgroundThread::ThreadPool> m_Thread;
 			std::list<std::unique_ptr<WorkViewModel>> m_Worker;
 		};
 	}

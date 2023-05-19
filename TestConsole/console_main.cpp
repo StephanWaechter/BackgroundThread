@@ -1,19 +1,11 @@
 ﻿// CMakeTest.cpp : Defines the entry point for the application.
 //
-
-#include <BackgroundThread/Thread.hpp>
-#include <BackgroundThread/Task.hpp>
+#include <ThreadPool.hpp>
+#include <Task.hpp>
 #include <iostream>
 #include <string>
 
 using namespace BackgroundThread;
-
-std::unique_ptr<Thread> bthread;
-void notify()
-{
-	std::this_thread::sleep_for(std::chrono::seconds(1));
-	bthread->DoUiWork();
-}
 
 int work(int input,std::function<void(double)> progress)
 {
@@ -46,38 +38,32 @@ void done(std::shared_future<int> result)
 
 int main()
 {
-	bthread = std::make_unique<Thread>(notify, 1);
-    auto nprogress = bthread->CreateNotifier<double>(progress);
+	ThreadPool threads(4);
+	auto& uiworker = threads.get_UiWorker();
+	uiworker.set_Notifer(
+		[&uiworker] {
+			uiworker.doWork();
+		}
+	);
 
-	for(int k = 0; k < 1; k++)
+	auto nprogress = uiworker.CreateNotifier<double>(
+		[](double progress)
+		{
+			std::cout << ".";
+		}
+	);
+
+	for(int k = 0; k < 4; k++)
 	{
-		auto task = CreateTask<int>(
+		auto task = Task::Create<int>(
 			[=] () -> int
 			{
 				return work(k, nprogress);
 			},
 			done
 			);
-		bthread->Run(task);
+		threads.push(std::move(task));
 	}
-
-
-	for(int k = 0; k < 1; k++)
-	{
-		auto task = CreateTask<void>(
-			[=] () -> void
-			{
-				work(k, nprogress);
-			},
-			[=] (std::shared_future<void>)
-			{
-				std::cout << "done" << std::endl;
-			}
-
-			);
-		bthread->Run(task);
-	}
-
 
 	std::string line;
 	return 0;
