@@ -4,16 +4,16 @@
 cmake_minimum_required (VERSION 3.8)
 project(BackgroundThreadLibrary VERSION 0.0.2)
 
-add_library(BackgroundThread "Thread.cpp")
+add_library(BackgroundThread  "ThreadPool.cpp" "UiWorker.cpp")
 target_compile_definitions(BackgroundThread PUBLIC cxx_std_17)
 target_include_directories(BackgroundThread PUBLIC 
-	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
 	$<INSTALL_INTERFACE:include>)
 target_link_libraries(BackgroundThread)
 
 
 set_target_properties(BackgroundThread PROPERTIES PUBLIC_HEADER
-"include/BackgroundThread/BaseTask.hpp;include/BackgroundThread/Task.hpp;include/BackgroundThread/Thread.hpp;include/BackgroundThread/Token.hpp;include/BackgroundThread/types.hpp")
+"Task.hpp;ThreadPool.hpp;Token.hpp;Types.hpp;UiWork.hpp;UiWorkder.hpp")
 
 add_library(SWTHREADING::BackgroundThread ALIAS BackgroundThread)
 

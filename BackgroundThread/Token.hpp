@@ -1,6 +1,6 @@
 #pragma once
 #include <mutex>
-#include "types.hpp"
+#include "Types.hpp"
 
 namespace BackgroundThread
 {
@@ -18,7 +18,7 @@ namespace BackgroundThread
 		void ThrowIfAborted() const
 		{
 			std::lock_guard<std::mutex> lock(m_mutex);
-			if(m_Aborted)
+			if (m_Aborted)
 			{
 				throw AbortedException("Thread was Aborted");
 			}
