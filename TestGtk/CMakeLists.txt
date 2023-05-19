@@ -15,12 +15,6 @@ FIND_PACKAGE(PkgConfig REQUIRED)
 FIND_PACKAGE(Threads REQUIRED)
 pkg_check_modules(GTKMM gtkmm-4.0)
 
-if(NOT ${GTKMM_FOUND})
-    message(STATUS "gtkmm-4.0 not install dont build GtkDemo")
-    return()
-endif()
-
- 
 add_executable(TestGtk  "gtk_main.cpp" 
     "ViewModels/MainViewModel.cpp"
     "ViewModels/WorkViewModel.cpp") 
