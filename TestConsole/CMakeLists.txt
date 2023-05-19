@@ -16,5 +16,3 @@ endif()
 add_executable(TestConsol  "console_main.cpp") 
 
 target_link_libraries(TestConsol PRIVATE SWTHREADING::BackgroundThread)
-
-install(TARGETS TestConsol DESTINATION ${CMAKE_BINARY_DIR})

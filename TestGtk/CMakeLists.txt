@@ -30,6 +30,3 @@ target_link_libraries(
     TestGtk PRIVATE 
     ${GTKMM_LINK_LIBRARIES}
     SWTHREADING::BackgroundThread)
-
-# TODO: Add tests and install targets if needed.
-install(TARGETS TestGtk DESTINATION ${CMAKE_BINARY_DIR})
