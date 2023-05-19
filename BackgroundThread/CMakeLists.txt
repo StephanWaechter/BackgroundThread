@@ -13,7 +13,7 @@ target_link_libraries(BackgroundThread)
 
 
 set_target_properties(BackgroundThread PROPERTIES PUBLIC_HEADER
-"Task.hpp;ThreadPool.hpp;Token.hpp;Types.hpp;UiWork.hpp;UiWorkder.hpp")
+"Task.hpp;ThreadPool.hpp;Token.hpp;Types.hpp;UiWork.hpp;UiWorker.hpp")
 
 add_library(SWTHREADING::BackgroundThread ALIAS BackgroundThread)
 
