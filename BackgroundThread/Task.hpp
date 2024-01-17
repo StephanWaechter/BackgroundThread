@@ -85,7 +85,7 @@ namespace BackgroundThread
 			{
 				try
 				{
-					if constexpr (std::is_void<TResult>())
+					if constexpr (std::is_void_v<TResult> == true)
 					{
 						m_work();
 						m_promis.set_value();
